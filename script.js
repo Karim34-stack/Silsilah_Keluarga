@@ -1,24 +1,31 @@
-// State Aplikasi
+// ============================================================
+// Silsilah Keluarga - Client-side Logic (script.js Final)
+// ============================================================
+
+// State Utama Aplikasi
 let members = [];
 let isAdmin = false;
 let scriptUrl = localStorage.getItem('gs_script_url') || '';
 let viewMode = 'tree'; // 'tree' | 'grid'
+let renderedMemberIds = new Set(); // Pelacak global untuk cegah duplikasi kartu
 
 const ADMIN_PIN = "1234";
 
-// Sample Data Awal jika kosong
+// Sample Data Awal (digunakan jika localStorage/Sheets kosong)
 const defaultMembers = [
-    { id: "m1", nama: "Kakek Ahmad", gender: "L", generasi: 1, status: "Wafat", ayahId: "", ibuId: "", pasanganId: "m2", foto: "", catatan: "Perintis keluarga besar." },
-    { id: "m2", nama: "Nenek Fatimah", gender: "P", generasi: 1, status: "Wafat", ayahId: "", ibuId: "", pasanganId: "m1", foto: "", catatan: "" },
-    { id: "m3", nama: "Budi Santoso", gender: "L", generasi: 2, status: "Hidup", ayahId: "m1", ibuId: "m2", pasanganId: "m4", foto: "", catatan: "" },
-    { id: "m4", nama: "Siti Rahma", gender: "P", generasi: 2, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m3", foto: "", catatan: "" },
-    { id: "m5", nama: "Rian Santoso", gender: "L", generasi: 3, status: "Hidup", ayahId: "m3", ibuId: "m4", pasanganId: "", foto: "", catatan: "Anak pertama." }
+    { id: "m1", nama: "Kaidi", gender: "L", generasi: 1, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m2", foto: "", catatan: "Kakek / Kepala Keluarga Pertama" },
+    { id: "m2", nama: "Tukirah", gender: "P", generasi: 1, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m1", foto: "", catatan: "Nenek" },
+    { id: "m3", nama: "Budi Santoso", gender: "L", generasi: 2, status: "Hidup", ayahId: "m1", ibuId: "m2", pasanganId: "m4", foto: "", catatan: "Anak Pertama" },
+    { id: "m4", nama: "Wiwit", gender: "P", generasi: 2, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m3", foto: "", catatan: "Istri Budi Santoso" },
+    { id: "m5", nama: "Zeni DS", gender: "P", generasi: 2, status: "Hidup", ayahId: "m1", ibuId: "m2", pasanganId: "", foto: "", catatan: "Anak Kedua" },
+    { id: "m6", nama: "Kana Zs", gender: "P", generasi: 3, status: "Hidup", ayahId: "m3", ibuId: "m4", pasanganId: "", foto: "", catatan: "Cucu" }
 ];
 
-// Inisialisasi
+// Inisialisasi Saat Halaman Dimuat
 document.addEventListener('DOMContentLoaded', () => {
     if (scriptUrl) {
-        document.getElementById('script-url-input').value = scriptUrl;
+        const inputElem = document.getElementById('script-url-input');
+        if (inputElem) inputElem.value = scriptUrl;
         syncData();
     } else {
         members = JSON.parse(localStorage.getItem('local_members')) || defaultMembers;
@@ -27,20 +34,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Update Badge Koneksi Database
+// Update Badge Status Database di Header
 function updateDbBadge(connected, text) {
     const dot = document.getElementById('status-dot');
     const label = document.getElementById('status-text');
-    label.innerText = text;
+    if (label) label.innerText = text;
 
-    if (connected) {
-        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
-    } else {
-        dot.className = "w-2 h-2 rounded-full bg-amber-400";
+    if (dot) {
+        if (connected) {
+            dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        } else {
+            dot.className = "w-2 h-2 rounded-full bg-amber-400";
+        }
     }
 }
 
-// Sinkronisasi dengan Google Apps Script JS API
+// Sinkronisasi Data dengan Google Apps Script (Spreadsheet)
 async function syncData() {
     if (!scriptUrl) {
         updateDbBadge(false, 'Lokal / Terputus');
@@ -62,7 +71,7 @@ async function syncData() {
             localStorage.setItem('local_members', JSON.stringify(members));
             updateDbBadge(true, 'Sheets Terhubung');
         } else {
-            throw new Error('Format Data Salah');
+            throw new Error('Format Data Tidak Valid');
         }
     } catch (err) {
         console.error('Sync Error:', err);
@@ -73,7 +82,7 @@ async function syncData() {
     renderApp();
 }
 
-// Simpan Perubahan ke Backend & LocalStorage
+// Simpan Semua Perubahan Data ke Backend / LocalStorage
 async function saveAllData() {
     localStorage.setItem('local_members', JSON.stringify(members));
     
@@ -97,16 +106,16 @@ async function saveAllData() {
     renderApp();
 }
 
-// Toggle Admin Status
+// Toggle Peran Mode Admin
 function toggleAdminRole() {
     if (isAdmin) {
         isAdmin = false;
-        alert("Anda kembali ke Mode Anggota biasa.");
+        alert("Anda telah kembali ke Mode Anggota biasa.");
     } else {
-        const pin = prompt("Masukkan PIN Admin:");
+        const pin = prompt("Masukkan PIN Admin (Default: 1234):");
         if (pin === ADMIN_PIN) {
             isAdmin = true;
-            alert("Mode Admin Aktif! Anda memiliki hak edit & hapus.");
+            alert("Mode Admin Aktif! Anda sekarang memiliki akses Edit & Hapus.");
         } else if (pin !== null) {
             alert("PIN Salah!");
         }
@@ -119,31 +128,43 @@ function updateAdminUI() {
     const btnText = document.getElementById('admin-text');
     const btn = document.getElementById('btn-admin');
 
-    if (isAdmin) {
-        btnText.innerText = "Admin (Aktif)";
-        btn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-medium transition";
-    } else {
-        btnText.innerText = "Mode Admin";
-        btn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition";
+    if (btnText && btn) {
+        if (isAdmin) {
+            btnText.innerText = "Admin (Aktif)";
+            btn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-medium transition shadow-sm";
+        } else {
+            btnText.innerText = "Mode Admin";
+            btn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition";
+        }
     }
 }
 
-// Set Display Mode
+// Mengubah Mode Tampilan (Pohon / Grid)
 function setViewMode(mode) {
     viewMode = mode;
-    document.getElementById('view-tree-btn').className = mode === 'tree' ? 'px-3 py-1.5 rounded-md font-medium bg-emerald-600 text-white' : 'px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200';
-    document.getElementById('view-grid-btn').className = mode === 'grid' ? 'px-3 py-1.5 rounded-md font-medium bg-emerald-600 text-white' : 'px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200';
+    const treeBtn = document.getElementById('view-tree-btn');
+    const gridBtn = document.getElementById('view-grid-btn');
+
+    if (treeBtn && gridBtn) {
+        treeBtn.className = mode === 'tree' ? 'px-3 py-1.5 rounded-md font-medium bg-emerald-600 text-white' : 'px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200';
+        gridBtn.className = mode === 'grid' ? 'px-3 py-1.5 rounded-md font-medium bg-emerald-600 text-white' : 'px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200';
+    }
     renderApp();
 }
 
-// Render Aplikasi Utama
+// Function Utama Render UI
 function renderApp() {
     updateFilterOptions();
     const container = document.getElementById('tree-container');
+    if (!container) return;
+    
     container.innerHTML = '';
 
-    const searchQuery = document.getElementById('search-input').value.toLowerCase();
-    const selectedGen = document.getElementById('filter-gen').value;
+    const searchInput = document.getElementById('search-input');
+    const filterGenSelect = document.getElementById('filter-gen');
+
+    const searchQuery = searchInput ? searchInput.value.toLowerCase() : '';
+    const selectedGen = filterGenSelect ? filterGenSelect.value : 'ALL';
 
     let filtered = members.filter(m => m.nama.toLowerCase().includes(searchQuery));
     if (selectedGen !== 'ALL') {
@@ -151,7 +172,7 @@ function renderApp() {
     }
 
     if (filtered.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500">Tidak ada data anggota ditemukan.</div>`;
+        container.innerHTML = `<div class="text-center py-12 text-slate-500 font-medium">Tidak ada data anggota ditemukan.</div>`;
         return;
     }
 
@@ -162,65 +183,63 @@ function renderApp() {
     }
 }
 
-// Render Tampilan Pohon Per Generasi
+// ------------------------------------------------------------
+// RENDER POHON SILSILAH TANPA DUPLIKASI
+// ------------------------------------------------------------
 function renderTreeView(container, filteredMembers) {
-    const generations = [...new Set(members.map(m => m.generasi))].sort((a, b) => a - b);
+    // Reset tracker global agar tidak ada kartu ganda yang dirender
+    renderedMemberIds = new Set();
 
-    generations.forEach(gen => {
-        const genMembers = filteredMembers.filter(m => m.generasi === gen);
-        if (genMembers.length === 0) return;
+    // 1. Cari kandidat akar (anggota yang tidak punya Ayah dan Ibu di database)
+    let rootCandidates = filteredMembers.filter(m => !m.ayahId && !m.ibuId);
 
-        const genSection = document.createElement('div');
-        genSection.className = 'bg-slate-800/40 border border-slate-700/60 rounded-xl p-4 relative';
+    // Jika tidak ada akar murni, gunakan anggota dari generasi terkecil
+    if (rootCandidates.length === 0 && filteredMembers.length > 0) {
+        const minGen = Math.min(...filteredMembers.map(m => m.generasi));
+        rootCandidates = filteredMembers.filter(m => m.generasi === minGen);
+    }
 
-        genSection.innerHTML = `
-            <div class="flex items-center gap-2 mb-4 pb-2 border-b border-slate-700/50">
-                <span class="bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-xs border border-emerald-500/30">Generasi ${gen}</span>
-                <span class="text-xs text-slate-400">(${genMembers.length} Anggota)</span>
-            </div>
-            <div class="flex flex-wrap justify-center gap-4" id="gen-grid-${gen}"></div>
-        `;
-
-        container.appendChild(genSection);
-        const grid = document.getElementById(`gen-grid-${gen}`);
-
-        genMembers.forEach(m => {
-            grid.appendChild(createMemberCard(m));
-        });
-    });
-}
-
-// Render Tampilan Pohon Rekursif Berabang
-function renderTreeView(container, filteredMembers) {
-    // Cari Akar Keluarga (Anggota tanpa Ayah & Ibu)
-    const roots = filteredMembers.filter(m => !m.ayahId && !m.ibuId);
-
-    if (roots.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500">Tidak ada akar silsilah yang cocok.</div>`;
+    if (rootCandidates.length === 0) {
+        container.innerHTML = `<div class="text-center py-12 text-slate-500">Tidak ada data silsilah.</div>`;
         return;
     }
 
     const treeWrapper = document.createElement('div');
-    treeWrapper.className = 'flex flex-col items-center gap-12 overflow-x-auto py-6';
+    treeWrapper.className = 'flex flex-col items-center gap-12 overflow-x-auto py-6 w-full';
 
-    roots.forEach(root => {
-        // Jika akar sudah menjadi pasangan dari akar lain yang diproses, lewati agar tidak ganda
-        const isSpouseProcessed = roots.some(r => r.id === root.pasanganId && r.id < root.id);
-        if (!isSpouseProcessed) {
-            treeWrapper.appendChild(buildTreeNode(root, filteredMembers));
+    // Build pohon dari setiap akar
+    rootCandidates.forEach(root => {
+        if (!renderedMemberIds.has(root.id)) {
+            const treeNode = buildTreeNode(root, filteredMembers);
+            if (treeNode) {
+                treeWrapper.appendChild(treeNode);
+            }
         }
     });
 
     container.appendChild(treeWrapper);
 }
 
-// Fungsi Rekursif Membuat Node Pohon Beserta Cabang Anak
+// Rekursi Pembangunan Node Pohon Silsilah
 function buildTreeNode(member, allMembers) {
+    // Lewati jika anggota ini sudah dirender sebelumnya
+    if (renderedMemberIds.has(member.id)) {
+        return null;
+    }
+
+    // Tandai anggota sebagai sudah dirender
+    renderedMemberIds.add(member.id);
+
     const nodeContainer = document.createElement('div');
     nodeContainer.className = 'flex flex-col items-center tree-node';
 
-    // Kartu Anggota + Pasangan
+    // Cari Pasangan
     const spouse = allMembers.find(m => m.id === member.pasanganId);
+    if (spouse) {
+        renderedMemberIds.add(spouse.id); // Tandai pasangan agar tidak buat pohon terpisah
+    }
+
+    // Kotak Pasangan / Pasangan Inti
     const coupleBox = document.createElement('div');
     coupleBox.className = 'flex items-center gap-2 relative bg-slate-800/80 p-2 rounded-2xl border border-slate-700/80 shadow-lg';
 
@@ -235,48 +254,57 @@ function buildTreeNode(member, allMembers) {
 
     nodeContainer.appendChild(coupleBox);
 
-    // Cari Anak-Anak
-    const children = allMembers.filter(m => 
-        (m.ayahId === member.id || m.ibuId === member.id) ||
-        (spouse && (m.ayahId === spouse.id || m.ibuId === spouse.id))
-    );
+    // Cari Anak-Anak dari Pasangan Ini
+    const children = allMembers.filter(m => {
+        if (renderedMemberIds.has(m.id)) return false;
+        
+        const isChildOfMember = (m.ayahId && m.ayahId === member.id) || (m.ibuId && m.ibuId === member.id);
+        const isChildOfSpouse = spouse && ((m.ayahId && m.ayahId === spouse.id) || (m.ibuId && m.ibuId === spouse.id));
+        
+        return isChildOfMember || isChildOfSpouse;
+    });
 
+    // Render Cabang Anak
     if (children.length > 0) {
-        // Garis Vertikal Turun
         const lineDown = document.createElement('div');
         lineDown.className = 'tree-line-v h-6';
         nodeContainer.appendChild(lineDown);
 
-        // Container Cabang Anak
         const childrenContainer = document.createElement('div');
-        childrenContainer.className = 'flex items-start justify-center relative pt-4';
+        childrenContainer.className = 'flex items-start justify-center relative pt-4 gap-6';
 
-        // Garis Horisontal Penghubung Cabang
         if (children.length > 1) {
             const lineHorizontal = document.createElement('div');
-            lineHorizontal.className = 'tree-line-h absolute top-0 left-1/4 right-1/4';
+            lineHorizontal.className = 'tree-line-h absolute top-0 left-6 right-6';
             childrenContainer.appendChild(lineHorizontal);
         }
 
         children.forEach(child => {
-            const childWrapper = document.createElement('div');
-            childWrapper.className = 'flex flex-col items-center px-4 relative';
+            if (!renderedMemberIds.has(child.id)) {
+                const childWrapper = document.createElement('div');
+                childWrapper.className = 'flex flex-col items-center relative';
 
-            // Garis Vertikal Atas Anak
-            const lineUp = document.createElement('div');
-            lineUp.className = 'tree-line-v h-4 absolute -top-4';
-            childWrapper.appendChild(lineUp);
+                const lineUp = document.createElement('div');
+                lineUp.className = 'tree-line-v h-4 absolute -top-4';
+                childWrapper.appendChild(lineUp);
 
-            childWrapper.appendChild(buildTreeNode(child, allMembers));
-            childrenContainer.appendChild(childWrapper);
+                const childNode = buildTreeNode(child, allMembers);
+                if (childNode) {
+                    childWrapper.appendChild(childNode);
+                    childrenContainer.appendChild(childWrapper);
+                }
+            }
         });
 
-        nodeContainer.appendChild(childrenContainer);
+        if (childrenContainer.children.length > 0) {
+            nodeContainer.appendChild(childrenContainer);
+        }
     }
 
     return nodeContainer;
 }
-// Render Tampilan Grid Kartu
+
+// Render Mode Grid Kartu Biasa
 function renderGridView(container, filteredMembers) {
     const grid = document.createElement('div');
     grid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4';
@@ -284,7 +312,7 @@ function renderGridView(container, filteredMembers) {
     container.appendChild(grid);
 }
 
-// Buat Element Kartu Anggota
+// Templating Kartu Anggota
 function createMemberCard(m) {
     const card = document.createElement('div');
     card.className = "member-card bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col justify-between relative shadow-md group w-full max-w-xs";
@@ -299,7 +327,7 @@ function createMemberCard(m) {
                 <div class="flex items-center gap-3">
                     <img src="${photoUrl}" class="w-12 h-12 rounded-full object-cover border-2 ${m.gender === 'L' ? 'border-sky-500' : 'border-pink-500'} ${isDeceased ? 'grayscale' : ''}">
                     <div>
-                        <h4 class="font-bold text-slate-100 text-sm flex items-center gap-1.5 cursor-pointer hover:text-emerald-400" onclick="openDetailModal('${m.id}')">
+                        <h4 class="font-bold text-slate-100 text-sm flex items-center gap-1.5 cursor-pointer hover:text-emerald-400 transition" onclick="openDetailModal('${m.id}')">
                             ${m.nama}
                         </h4>
                         <div class="flex items-center gap-2 mt-0.5">
@@ -309,7 +337,7 @@ function createMemberCard(m) {
                     </div>
                 </div>
 
-                <!-- Admin Action Buttons -->
+                <!-- Tombol Aksi Khusus Admin -->
                 ${isAdmin ? `
                     <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
                         <button onclick="openFormModal('${m.id}')" class="p-1 text-slate-400 hover:text-sky-400"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -321,14 +349,14 @@ function createMemberCard(m) {
             ${m.catatan ? `<p class="text-xs text-slate-400 line-clamp-2 italic mb-3">"${m.catatan}"</p>` : ''}
         </div>
 
-        <!-- Add Relative Quick Options -->
+        <!-- Tombol Cepat Tambah Kerabat -->
         <div class="pt-2 border-t border-slate-700/50 flex justify-between items-center text-xs">
-            <button onclick="openDetailModal('${m.id}')" class="text-slate-400 hover:text-slate-200">Detail Kerabat</button>
+            <button onclick="openDetailModal('${m.id}')" class="text-slate-400 hover:text-slate-200 transition">Detail Kerabat</button>
             <div class="relative group/drop">
                 <button class="text-emerald-400 font-medium flex items-center gap-1 hover:underline">
                     <i class="fa-solid fa-plus text-[10px]"></i> Kerabat
                 </button>
-                <div class="absolute right-0 bottom-full mb-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl hidden group-hover/drop:block z-20 whitespace-nowrap overflow-hidden">
+                <div class="absolute right-0 bottom-full mb-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl hidden group-hover/drop:block z-30 whitespace-nowrap overflow-hidden">
                     <button onclick="quickAddRelative('${m.id}', 'ANAK')" class="block w-full text-left px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800 flex items-center gap-1.5">
                         <i class="fa-solid fa-child text-emerald-400"></i> Tambah Anak
                     </button>
@@ -346,7 +374,7 @@ function createMemberCard(m) {
     return card;
 }
 
-// Tambah Kerabat Cepat
+// Tambah Kerabat Kontekstual Cepat
 function quickAddRelative(targetId, type) {
     const target = members.find(m => m.id === targetId);
     if (!target) return;
@@ -371,9 +399,11 @@ function quickAddRelative(targetId, type) {
     }
 }
 
-// Dynamic Filter Generasi
+// Update Opsi Opsi Filter Generasi
 function updateFilterOptions() {
     const select = document.getElementById('filter-gen');
+    if (!select) return;
+
     const currentVal = select.value;
     const genList = [...new Set(members.map(m => m.generasi))].sort((a, b) => a - b);
 
@@ -384,11 +414,13 @@ function updateFilterOptions() {
     select.value = currentVal;
 }
 
-// Modal Form
+// Modal Form Tambah / Edit Anggota
 function openFormModal(editId = null) {
     populateParentDropdowns(editId);
     const modal = document.getElementById('form-modal');
     const form = document.getElementById('member-form');
+    if (!modal || !form) return;
+
     form.reset();
 
     if (editId) {
@@ -414,13 +446,16 @@ function openFormModal(editId = null) {
 }
 
 function closeFormModal() {
-    document.getElementById('form-modal').classList.add('hidden');
+    const modal = document.getElementById('form-modal');
+    if (modal) modal.classList.add('hidden');
 }
 
 function populateParentDropdowns(excludeId = null) {
     const ayahSel = document.getElementById('form-ayah');
     const ibuSel = document.getElementById('form-ibu');
     const pasanganSel = document.getElementById('form-pasangan');
+
+    if (!ayahSel || !ibuSel || !pasanganSel) return;
 
     ayahSel.innerHTML = `<option value="">-- Tidak Ada --</option>`;
     ibuSel.innerHTML = `<option value="">-- Tidak Ada --</option>`;
@@ -462,7 +497,7 @@ function handleFormSubmit(e) {
         members.push(newMember);
     }
 
-    // Two-way sync Pasangan
+    // Sinkronisasi Dua Arah untuk Pasangan
     if (newMember.pasanganId) {
         const spouse = members.find(m => m.id === newMember.pasanganId);
         if (spouse) spouse.pasanganId = id;
@@ -472,16 +507,16 @@ function handleFormSubmit(e) {
     saveAllData();
 }
 
-// Hapus Anggota
+// Hapus Data Anggota (Khusus Admin)
 function deleteMember(id) {
     if (!isAdmin) {
-        alert("Hanya Admin yang dapat menghapus data.");
+        alert("Hanya Admin yang memiliki hak akses untuk menghapus data.");
         return;
     }
 
     if (confirm("Apakah Anda yakin ingin menghapus anggota keluarga ini?")) {
         members = members.filter(m => m.id !== id);
-        // Hapus link relasi
+        // Hapus tautan relasi
         members.forEach(m => {
             if (m.ayahId === id) m.ayahId = "";
             if (m.ibuId === id) m.ibuId = "";
@@ -491,7 +526,7 @@ function deleteMember(id) {
     }
 }
 
-// Detail Drawer / Modal
+// Modal Detail Anggota Keluarga
 function openDetailModal(id) {
     const m = members.find(item => item.id === id);
     if (!m) return;
@@ -504,6 +539,8 @@ function openDetailModal(id) {
     const defaultAvatar = m.gender === 'L' ? 'https://avatar.iran.liara.run/public/boy' : 'https://avatar.iran.liara.run/public/girl';
 
     const container = document.getElementById('detail-content');
+    if (!container) return;
+
     container.innerHTML = `
         <div class="text-center mb-6">
             <img src="${m.foto || defaultAvatar}" class="w-20 h-20 rounded-full mx-auto object-cover border-4 ${m.gender === 'L' ? 'border-sky-500' : 'border-pink-500'} mb-2">
@@ -514,18 +551,18 @@ function openDetailModal(id) {
         <div class="space-y-4 text-xs">
             <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/50">
                 <span class="text-slate-400 font-semibold uppercase block mb-1">Orang Tua:</span>
-                <p class="text-slate-200">Ayah: ${ayah ? `<span class="text-emerald-400 cursor-pointer" onclick="openDetailModal('${ayah.id}')">${ayah.nama}</span>` : '-'}</p>
-                <p class="text-slate-200">Ibu: ${ibu ? `<span class="text-emerald-400 cursor-pointer" onclick="openDetailModal('${ibu.id}')">${ibu.nama}</span>` : '-'}</p>
+                <p class="text-slate-200">Ayah: ${ayah ? `<span class="text-emerald-400 cursor-pointer hover:underline" onclick="openDetailModal('${ayah.id}')">${ayah.nama}</span>` : '-'}</p>
+                <p class="text-slate-200">Ibu: ${ibu ? `<span class="text-emerald-400 cursor-pointer hover:underline" onclick="openDetailModal('${ibu.id}')">${ibu.nama}</span>` : '-'}</p>
             </div>
 
             <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/50">
                 <span class="text-slate-400 font-semibold uppercase block mb-1">Pasangan:</span>
-                <p class="text-slate-200">${pasangan ? `<span class="text-emerald-400 cursor-pointer" onclick="openDetailModal('${pasangan.id}')">${pasangan.nama}</span>` : '-'}</p>
+                <p class="text-slate-200">${pasangan ? `<span class="text-emerald-400 cursor-pointer hover:underline" onclick="openDetailModal('${pasangan.id}')">${pasangan.nama}</span>` : '-'}</p>
             </div>
 
             <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/50">
                 <span class="text-slate-400 font-semibold uppercase block mb-1">Anak-Anak (${anakList.length}):</span>
-                ${anakList.length > 0 ? `<ul class="list-disc pl-4 space-y-1">${anakList.map(a => `<li class="text-emerald-400 cursor-pointer" onclick="openDetailModal('${a.id}')">${a.nama}</li>`).join('')}</ul>` : '<p class="text-slate-500">-</p>'}
+                ${anakList.length > 0 ? `<ul class="list-disc pl-4 space-y-1">${anakList.map(a => `<li class="text-emerald-400 cursor-pointer hover:underline" onclick="openDetailModal('${a.id}')">${a.nama}</li>`).join('')}</ul>` : '<p class="text-slate-500">-</p>'}
             </div>
 
             ${m.catatan ? `
@@ -537,24 +574,31 @@ function openDetailModal(id) {
         </div>
     `;
 
-    document.getElementById('detail-modal').classList.remove('hidden');
+    const detailModal = document.getElementById('detail-modal');
+    if (detailModal) detailModal.classList.remove('hidden');
 }
 
 function closeDetailModal() {
-    document.getElementById('detail-modal').classList.add('hidden');
+    const modal = document.getElementById('detail-modal');
+    if (modal) modal.classList.add('hidden');
 }
 
-// Config Modal
+// Modal Pengaturan URL Google Sheets API
 function openConfigModal() {
-    document.getElementById('config-modal').classList.remove('hidden');
+    const modal = document.getElementById('config-modal');
+    if (modal) modal.classList.remove('hidden');
 }
 
 function closeConfigModal() {
-    document.getElementById('config-modal').classList.add('hidden');
+    const modal = document.getElementById('config-modal');
+    if (modal) modal.classList.add('hidden');
 }
 
 function saveScriptUrl() {
-    const url = document.getElementById('script-url-input').value.trim();
+    const input = document.getElementById('script-url-input');
+    if (!input) return;
+
+    const url = input.value.trim();
     scriptUrl = url;
     localStorage.setItem('gs_script_url', url);
     closeConfigModal();
