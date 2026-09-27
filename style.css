@@ -4,27 +4,18 @@
 
 body {
   margin: 0;
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
 
   background: #f4f6f8;
   color: #222;
 }
-
 
 /* =========================
    HEADER
 ========================= */
 
 .header {
-  background:
-    linear-gradient(
-      135deg,
-      #14532d,
-      #166534
-    );
+  background: linear-gradient(135deg, #14532d, #166534);
 
   color: white;
   padding: 20px;
@@ -47,9 +38,8 @@ body {
 
 .header p {
   margin: 0;
-  opacity: .9;
+  opacity: 0.9;
 }
-
 
 /* =========================
    CONTAINER
@@ -60,7 +50,6 @@ body {
   margin: auto;
   padding: 25px 15px;
 }
-
 
 /* =========================
    TOOLBAR
@@ -82,7 +71,6 @@ body {
   font-size: 15px;
 }
 
-
 /* =========================
    BUTTON
 ========================= */
@@ -97,7 +85,7 @@ body {
 
   font-weight: 600;
 
-  transition: .2s;
+  transition: 0.2s;
 }
 
 .btn:hover {
@@ -133,7 +121,6 @@ body {
   width: 100%;
 }
 
-
 /* =========================
    FAMILY TREE
 ========================= */
@@ -141,15 +128,10 @@ body {
 .family-tree {
   display: grid;
 
-  grid-template-columns:
-    repeat(
-      auto-fill,
-      minmax(280px, 1fr)
-    );
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 
   gap: 20px;
 }
-
 
 /* =========================
    CARD
@@ -162,19 +144,16 @@ body {
 
   overflow: hidden;
 
-  box-shadow:
-    0 5px 20px rgba(0,0,0,.08);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
 
-  transition: .2s;
+  transition: 0.2s;
 }
 
 .person-card:hover {
   transform: translateY(-3px);
 
-  box-shadow:
-    0 8px 25px rgba(0,0,0,.12);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
 }
-
 
 .card-photo {
   width: 100%;
@@ -200,7 +179,6 @@ body {
 
   font-size: 50px;
 }
-
 
 .card-body {
   padding: 18px;
@@ -233,7 +211,6 @@ body {
   margin-top: 15px;
 }
 
-
 /* =========================
    MODAL
 ========================= */
@@ -243,8 +220,7 @@ body {
 
   inset: 0;
 
-  background:
-    rgba(0,0,0,.55);
+  background: rgba(0, 0, 0, 0.55);
 
   display: flex;
 
@@ -294,7 +270,6 @@ body {
   color: #666;
 }
 
-
 /* =========================
    FORM
 ========================= */
@@ -302,8 +277,7 @@ body {
 .form-grid {
   display: grid;
 
-  grid-template-columns:
-    repeat(2, 1fr);
+  grid-template-columns: repeat(2, 1fr);
 
   gap: 15px;
 }
@@ -344,7 +318,6 @@ body {
   color: #6b7280;
 }
 
-
 .form-actions {
   display: flex;
 
@@ -354,7 +327,6 @@ body {
 
   margin-top: 25px;
 }
-
 
 /* =========================
    PHOTO PREVIEW
@@ -372,7 +344,6 @@ body {
 
   border-radius: 10px;
 }
-
 
 /* =========================
    DETAIL
@@ -398,8 +369,7 @@ body {
 .detail-row {
   display: grid;
 
-  grid-template-columns:
-    150px 1fr;
+  grid-template-columns: 150px 1fr;
 
   padding: 10px 0;
 
@@ -410,7 +380,6 @@ body {
   font-weight: bold;
 }
 
-
 /* =========================
    IMAGE MODAL
 ========================= */
@@ -420,8 +389,7 @@ body {
 
   inset: 0;
 
-  background:
-    rgba(0,0,0,.9);
+  background: rgba(0, 0, 0, 0.9);
 
   z-index: 2000;
 
@@ -459,7 +427,6 @@ body {
   cursor: pointer;
 }
 
-
 /* =========================
    LOADING
 ========================= */
@@ -472,7 +439,6 @@ body {
   color: #666;
 }
 
-
 /* =========================
    ERROR
 ========================= */
@@ -483,7 +449,6 @@ body {
   margin-top: 10px;
 }
 
-
 /* =========================
    HIDDEN
 ========================= */
@@ -491,7 +456,6 @@ body {
 .hidden {
   display: none !important;
 }
-
 
 /* =========================
    MAPS
@@ -507,13 +471,11 @@ body {
   margin-top: 10px;
 }
 
-
 /* =========================
    MOBILE
 ========================= */
 
 @media (max-width: 700px) {
-
   .header-content {
     flex-direction: column;
 
@@ -548,5 +510,4 @@ body {
   .family-tree {
     grid-template-columns: 1fr;
   }
-
 }
