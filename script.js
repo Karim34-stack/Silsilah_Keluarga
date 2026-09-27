@@ -2,7 +2,7 @@
 // KONFIGURASI DATABASE GOOGLE SHEETS (TERHUBUNG OTOMATIS)
 // ============================================================
 // Tempelkan URL Google Apps Script Web App Anda di sini:
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbztWvj1nTdG9E1tDu0Uhp3ihSR6RNmmF2nNnaJ_2wbGgoxmYpDf_1t7FaDbutCDq2iwww/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLSVQPcbETmXAna8tSs7uIweqzM1HJpbn9lExO7kyPa_Hcr6e0Pyw8CtBCSMve9a3_Xg/exec";
 
 // State Utama Aplikasi
 let members = [];
