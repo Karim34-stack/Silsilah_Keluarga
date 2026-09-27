@@ -1,30 +1,27 @@
 // ============================================================
-// KONFIGURASI DATABASE GOOGLE SHEETS
+// KONFIGURASI DATABASE GOOGLE SHEETS & DRIVE
 // ============================================================
-// Ganti URL di bawah dengan Web App URL Google Apps Script Anda:
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLSVQPcbETmXAna8tSs7uIweqzM1HJpbn9lExO7kyPa_Hcr6e0Pyw8CtBCSMve9a3_Xg/exec";
 
-// State Utama
 let members = [];
 let isAdmin = false;
 let viewMode = 'tree';
-let renderedMemberIds = new Set(); // Mencegah duplikasi kartu
+let renderedMemberIds = new Set();
 const ADMIN_PIN = "1234";
 
-// Data Cadangan Default
 const defaultMembers = [
     { id: "m1", nama: "Kaidi", gender: "L", generasi: 1, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m2", foto: "", catatan: "Kakek" },
     { id: "m2", nama: "Tukirah", gender: "P", generasi: 1, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m1", foto: "", catatan: "Nenek" },
-    { id: "m3", nama: "Budi Santoso", gender: "L", generasi: 2, status: "Hidup", ayahId: "m1", ibuId: "m2", pasanganId: "m4", foto: "", catatan: "Anak 1" },
+    { id: "m3", nama: "Budi Santoso", gender: "L", generasi: 2, status: "Hidup", ayahId: "m1", ibuId: "m2", pasanganId: "m4", foto: "", catatan: "Anak Pertama" },
     { id: "m4", nama: "Wiwit", gender: "P", generasi: 2, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m3", foto: "", catatan: "Istri Budi" },
-    { id: "m5", nama: "Kana Zs", gender: "P", generasi: 3, status: "Hidup", ayahId: "m3", ibuId: "m4", pasanganId: "", foto: "", catatan: "Cucu" }
+    { id: "m5", nama: "Zeni DS", gender: "P", generasi: 2, status: "Hidup", ayahId: "m1", ibuId: "m2", pasanganId: "", foto: "", catatan: "Anak Kedua" },
+    { id: "m6", nama: "Kana Zs", gender: "P", generasi: 3, status: "Hidup", ayahId: "m3", ibuId: "m4", pasanganId: "", foto: "", catatan: "Cucu" }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchDataFromDatabase();
 });
 
-// Indikator Koneksi Status
 function updateDbBadge(status, text) {
     const dot = document.getElementById('status-dot');
     const label = document.getElementById('status-text');
@@ -38,7 +35,7 @@ function updateDbBadge(status, text) {
 }
 
 // ------------------------------------------------------------
-// 1. KONEKSI GOOGLE SHEETS
+// 1. KONEKSI GOOGLE SHEETS DATABASE
 // ------------------------------------------------------------
 async function fetchDataFromDatabase() {
     updateDbBadge('loading', 'Menghubungkan Database...');
@@ -100,7 +97,7 @@ async function saveDataToDatabase() {
 }
 
 // ------------------------------------------------------------
-// 2. FITUR UPLOAD FOTO KE GOOGLE DRIVE
+// 2. UNGGAH FOTO KE GOOGLE DRIVE
 // ------------------------------------------------------------
 async function handleFileSelect(event) {
     const file = event.target.files[0];
@@ -132,14 +129,14 @@ async function handleFileSelect(event) {
             if (result.status === 'success' && result.photoUrl) {
                 document.getElementById('form-foto').value = result.photoUrl;
                 if (statusElem) {
-                    statusElem.innerText = "Foto berhasil diunggah!";
+                    statusElem.innerText = "Foto berhasil diunggah ke Google Drive!";
                     statusElem.className = "text-[10px] text-emerald-400 mt-1 block";
                 }
             }
         } catch (err) {
             console.error("Upload error:", err);
             if (statusElem) {
-                statusElem.innerText = "Foto terkirim ke latar belakang (Cek beberapa saat lagi).";
+                statusElem.innerText = "Proses upload terkirim (Silakan cek setelah simpan data).";
                 statusElem.className = "text-[10px] text-sky-400 mt-1 block";
             }
         }
@@ -149,7 +146,7 @@ async function handleFileSelect(event) {
 }
 
 // ------------------------------------------------------------
-// 3. LOGIKA RENDER POHON VISUAL (ANTI-DUPLIKAT)
+// 3. LOGIKA RENDER POHON & FILTER AKAR KELUARGA
 // ------------------------------------------------------------
 function renderApp() {
     updateFilterOptions();
@@ -160,10 +157,19 @@ function renderApp() {
 
     const searchQuery = (document.getElementById('search-input')?.value || '').toLowerCase();
     const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
+    const selectedRoot = document.getElementById('filter-root')?.value || 'ALL';
 
     let filtered = members.filter(m => m.nama.toLowerCase().includes(searchQuery));
+
+    // Filter berdasarkan Generasi
     if (selectedGen !== 'ALL') {
         filtered = filtered.filter(m => m.generasi === parseInt(selectedGen));
+    }
+
+    // Filter berdasarkan Akar Keluarga (Root/Leluhur)
+    if (selectedRoot !== 'ALL') {
+        const descendantIds = getAllDescendantsAndSpouses(selectedRoot);
+        filtered = filtered.filter(m => descendantIds.has(m.id));
     }
 
     if (filtered.length === 0) {
@@ -174,18 +180,48 @@ function renderApp() {
     if (viewMode === 'grid') {
         renderGridView(container, filtered);
     } else {
-        renderTreeView(container, filtered);
+        renderTreeView(container, filtered, selectedRoot);
     }
 }
 
-function renderTreeView(container, filteredMembers) {
-    renderedMemberIds = new Set(); // Reset tracker duplikat
+// Fungsi rekursif untuk mengambil semua keturunan & pasangan dari satu akar
+function getAllDescendantsAndSpouses(rootId) {
+    const result = new Set();
+    const queue = [rootId];
 
-    let rootCandidates = filteredMembers.filter(m => !m.ayahId && !m.ibuId);
+    while (queue.length > 0) {
+        const currentId = queue.shift();
+        if (!result.has(currentId)) {
+            result.add(currentId);
+            const currentObj = members.find(m => m.id === currentId);
+            
+            // Tambahkan pasangan
+            if (currentObj && currentObj.pasanganId) {
+                result.add(currentObj.pasanganId);
+            }
 
-    if (rootCandidates.length === 0 && filteredMembers.length > 0) {
-        const minGen = Math.min(...filteredMembers.map(m => m.generasi));
-        rootCandidates = filteredMembers.filter(m => m.generasi === minGen);
+            // Tambahkan anak-anak
+            const children = members.filter(m => m.ayahId === currentId || m.ibuId === currentId);
+            children.forEach(c => queue.push(c.id));
+        }
+    }
+    return result;
+}
+
+function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
+    renderedMemberIds = new Set();
+
+    let rootCandidates = [];
+
+    if (selectedRoot !== 'ALL') {
+        const rootObj = members.find(m => m.id === selectedRoot);
+        if (rootObj) rootCandidates = [rootObj];
+    } else {
+        rootCandidates = filteredMembers.filter(m => !m.ayahId && !m.ibuId);
+        if (rootCandidates.length === 0 && filteredMembers.length > 0) {
+            const minGen = Math.min(...filteredMembers.map(m => m.generasi));
+            rootCandidates = filteredMembers.filter(m => m.generasi === minGen);
+        }
     }
 
     const treeWrapper = document.createElement('div');
@@ -339,7 +375,35 @@ function createMemberCard(m) {
 }
 
 // ------------------------------------------------------------
-// 4. KELOLA DATA & MODAL
+// 4. PEMBARUAN OPSI FILTER DROPDOWN
+// ------------------------------------------------------------
+function updateFilterOptions() {
+    // 1. Update Filter Generasi
+    const genSelect = document.getElementById('filter-gen');
+    if (genSelect) {
+        const currentVal = genSelect.value;
+        const genList = [...new Set(members.map(m => m.generasi))].sort((a, b) => a - b);
+        genSelect.innerHTML = `<option value="ALL">Semua Generasi</option>`;
+        genList.forEach(g => genSelect.innerHTML += `<option value="${g}">Generasi ${g}</option>`);
+        genSelect.value = currentVal;
+    }
+
+    // 2. Update Filter Akar Keluarga (Paling Atas / Tanpa Orang Tua)
+    const rootSelect = document.getElementById('filter-root');
+    if (rootSelect) {
+        const currentVal = rootSelect.value;
+        const rootMembers = members.filter(m => !m.ayahId && !m.ibuId);
+        
+        rootSelect.innerHTML = `<option value="ALL">Semua Akar Keluarga</option>`;
+        rootMembers.forEach(r => {
+            rootSelect.innerHTML += `<option value="${r.id}">${r.nama} (Gen ${r.generasi})</option>`;
+        });
+        rootSelect.value = currentVal;
+    }
+}
+
+// ------------------------------------------------------------
+// 5. PENANGANAN FORM & MODAL
 // ------------------------------------------------------------
 function handleFormSubmit(e) {
     e.preventDefault();
@@ -462,25 +526,13 @@ function populateParentDropdowns(excludeId = null) {
     });
 }
 
-function updateFilterOptions() {
-    const select = document.getElementById('filter-gen');
-    if (!select) return;
-
-    const currentVal = select.value;
-    const genList = [...new Set(members.map(m => m.generasi))].sort((a, b) => a - b);
-
-    select.innerHTML = `<option value="ALL">Semua Generasi</option>`;
-    genList.forEach(g => select.innerHTML += `<option value="${g}">Generasi ${g}</option>`);
-    select.value = currentVal;
-}
-
 function setViewMode(mode) {
     viewMode = mode;
     const treeBtn = document.getElementById('view-tree-btn');
     const gridBtn = document.getElementById('view-grid-btn');
     if (treeBtn && gridBtn) {
-        treeBtn.className = mode === 'tree' ? 'px-3 py-1.5 rounded-md font-medium bg-emerald-600 text-white' : 'px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200';
-        gridBtn.className = mode === 'grid' ? 'px-3 py-1.5 rounded-md font-medium bg-emerald-600 text-white' : 'px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200';
+        treeBtn.className = mode === 'tree' ? 'px-3 py-1.5 rounded-lg font-medium bg-emerald-600 text-white transition' : 'px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition';
+        gridBtn.className = mode === 'grid' ? 'px-3 py-1.5 rounded-lg font-medium bg-emerald-600 text-white transition' : 'px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition';
     }
     renderApp();
 }
@@ -497,7 +549,7 @@ function toggleAdminRole() {
     const btn = document.getElementById('btn-admin');
     if (btnText && btn) {
         btnText.innerText = isAdmin ? "Admin (Aktif)" : "Mode Admin";
-        btn.className = isAdmin ? "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-medium" : "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300";
+        btn.className = isAdmin ? "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-medium text-xs transition" : "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300 text-xs font-medium transition";
     }
     renderApp();
 }
