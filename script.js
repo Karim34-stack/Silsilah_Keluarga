@@ -99,61 +99,85 @@ async function saveDataToDatabase() {
 // ------------------------------------------------------------
 // 2. UNGGAH FOTO KE GOOGLE DRIVE
 // ------------------------------------------------------------
+// ------------------------------------------------------------
+// UNGGAH FOTO PROFIL (KOMPRESI LOKAL & DIRECT LINK)
+// ------------------------------------------------------------
 async function handleFileSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Batasi ukuran file maks 5MB
-    if (file.size > 5 * 1024 * 1024) {
-        alert("Ukuran file foto terlalu besar (Maksimal 5MB)");
-        return;
-    }
-
     const statusElem = document.getElementById('upload-status');
     if (statusElem) {
-        statusElem.innerText = "Mengunggah foto ke Google Drive...";
+        statusElem.innerText = "Memproses foto...";
         statusElem.className = "text-[10px] text-amber-400 mt-1 block animate-pulse";
     }
 
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        const base64Data = e.target.result;
+    try {
+        // Kompresi Gambar di sisi Client (Browser) agar ukurannya kecil (Maksimal 300x300 px)
+        const compressedBase64 = await resizeAndCompressImage(file, 300, 300, 0.7);
 
-        try {
-            const payload = {
-                action: 'uploadPhoto',
-                fileName: `photo_${Date.now()}_${file.name}`,
-                mimeType: file.type,
-                fileData: base64Data
-            };
-
-            const res = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
-            });
-
-            const result = await res.json();
-
-            if (result.status === 'success' && result.photoUrl) {
-                document.getElementById('form-foto').value = result.photoUrl;
-                if (statusElem) {
-                    statusElem.innerText = "Foto berhasil diunggah ke Google Drive!";
-                    statusElem.className = "text-[10px] text-emerald-400 mt-1 block";
-                }
-            } else {
-                throw new Error(result.message || "Gagal mengunggah gambar");
-            }
-        } catch (err) {
-            console.error("Upload error:", err);
-            if (statusElem) {
-                statusElem.innerText = "Gagal mengunggah foto. Pastikan Web App Google Script diset ke 'Anyone'.";
-                statusElem.className = "text-[10px] text-rose-400 mt-1 block";
-            }
+        // Langsung masukkan data gambar yang sudah terkompresi ke input text
+        const fotoInput = document.getElementById('form-foto');
+        if (fotoInput) {
+            fotoInput.value = compressedBase64;
         }
-    };
 
-    reader.readAsDataURL(file);
+        if (statusElem) {
+            statusElem.innerText = "✓ Foto berhasil diproses dan siap disimpan!";
+            statusElem.className = "text-[10px] text-emerald-400 mt-1 block font-semibold";
+        }
+    } catch (err) {
+        console.error("Gagal memproses gambar:", err);
+        if (statusElem) {
+            statusElem.innerText = "Gagal memproses foto. Coba pilih file gambar lain.";
+            statusElem.className = "text-[10px] text-rose-400 mt-1 block";
+        }
+    }
+}
+
+// Fungsi Pembantu: Mengompresi & Memperkecil Ukuran Gambar di Browser
+function resizeAndCompressImage(file, maxWidth, maxHeight, quality) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function (e) {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Mengembalikan format Data URL Base64 yang sudah diperkecil (~20KB - 50KB)
+                const compressedUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedUrl);
+            };
+            img.onerror = function (error) {
+                reject(error);
+            };
+        };
+        reader.onerror = function (error) {
+            reject(error);
+        };
+    });
 }
 
 // ------------------------------------------------------------
