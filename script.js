@@ -103,6 +103,12 @@ async function handleFileSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Batasi ukuran file maks 5MB
+    if (file.size > 5 * 1024 * 1024) {
+        alert("Ukuran file foto terlalu besar (Maksimal 5MB)");
+        return;
+    }
+
     const statusElem = document.getElementById('upload-status');
     if (statusElem) {
         statusElem.innerText = "Mengunggah foto ke Google Drive...";
@@ -114,30 +120,35 @@ async function handleFileSelect(event) {
         const base64Data = e.target.result;
 
         try {
+            const payload = {
+                action: 'uploadPhoto',
+                fileName: `photo_${Date.now()}_${file.name}`,
+                mimeType: file.type,
+                fileData: base64Data
+            };
+
             const res = await fetch(SCRIPT_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({
-                    action: 'uploadPhoto',
-                    fileName: `photo_${Date.now()}_${file.name}`,
-                    mimeType: file.type,
-                    fileData: base64Data
-                })
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
             });
 
             const result = await res.json();
+
             if (result.status === 'success' && result.photoUrl) {
                 document.getElementById('form-foto').value = result.photoUrl;
                 if (statusElem) {
                     statusElem.innerText = "Foto berhasil diunggah ke Google Drive!";
                     statusElem.className = "text-[10px] text-emerald-400 mt-1 block";
                 }
+            } else {
+                throw new Error(result.message || "Gagal mengunggah gambar");
             }
         } catch (err) {
             console.error("Upload error:", err);
             if (statusElem) {
-                statusElem.innerText = "Proses upload terkirim (Silakan cek setelah simpan data).";
-                statusElem.className = "text-[10px] text-sky-400 mt-1 block";
+                statusElem.innerText = "Gagal mengunggah foto. Pastikan Web App Google Script diset ke 'Anyone'.";
+                statusElem.className = "text-[10px] text-rose-400 mt-1 block";
             }
         }
     };
