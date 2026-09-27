@@ -1,246 +1,197 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
-  <head>
-    <meta charset="UTF-8" />
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Silsilah Keluarga</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icon CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
 
-    <link rel="stylesheet" href="style.css" />
-  </head>
+    <!-- Header / Navbar -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xl border border-emerald-500/30">
+                    <i class="fa-solid fa-sitemap"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">Silsilah Keluarga</h1>
+                    <p class="text-xs text-slate-400">Database Berbagi & Visualisasi Pohon Keluarga</p>
+                </div>
+            </div>
 
-  <body>
-    <header class="header">
-      <div class="header-content">
-        <div>
-          <h1>🌳 Silsilah Keluarga</h1>
+            <div class="flex items-center space-x-2 text-xs">
+                <!-- Sync Badge -->
+                <div id="db-status-badge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-700 text-slate-300 border border-slate-600">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400" id="status-dot"></span>
+                    <span id="status-text">Memuat...</span>
+                </div>
 
-          <p>Dokumentasi keluarga dan hubungan kekerabatan</p>
+                <button onclick="syncData()" class="p-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition" title="Sinkronkan Data">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+
+                <button onclick="toggleAdminRole()" id="btn-admin" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition">
+                    <i class="fa-solid fa-lock text-xs"></i>
+                    <span id="admin-text">Mode Admin</span>
+                </button>
+
+                <button onclick="openConfigModal()" class="p-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition" title="Pengaturan Database">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
         </div>
-
-        <button id="loginBtn" class="btn btn-light" onclick="openLogin()">
-          🔐 Login Admin
-        </button>
-
-        <button
-          id="logoutBtn"
-          class="btn btn-danger hidden"
-          onclick="logoutAdmin()"
-        >
-          Logout
-        </button>
-      </div>
     </header>
 
-    <main class="container">
-      <!-- TOOLBAR -->
+    <!-- Content Area -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
 
-      <section class="toolbar">
-        <input
-          type="search"
-          id="searchInput"
-          placeholder="🔎 Cari nama anggota keluarga..."
-          oninput="render()"
-        />
+        <!-- Toolbar / Control Bar -->
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center shadow-lg">
+            <!-- Search & Filter -->
+            <div class="flex flex-wrap gap-3 w-full md:w-auto flex-1">
+                <div class="relative flex-1 min-w-[200px]">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="search-input" oninput="renderApp()" placeholder="Cari nama anggota..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                </div>
+                <select id="filter-gen" onchange="renderApp()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-emerald-500">
+                    <option value="ALL">Semua Generasi</option>
+                </select>
+            </div>
 
-        <button class="btn btn-primary" onclick="openAddModal()">
-          ➕ Tambah Anggota
-        </button>
-      </section>
+            <!-- View Toggle & Action -->
+            <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+                <div class="bg-slate-900 border border-slate-700 p-1 rounded-lg flex text-xs">
+                    <button id="view-tree-btn" onclick="setViewMode('tree')" class="px-3 py-1.5 rounded-md font-medium text-slate-300 transition">
+                        <i class="fa-solid fa-diagram-project mr-1"></i> Pohon
+                    </button>
+                    <button id="view-grid-btn" onclick="setViewMode('grid')" class="px-3 py-1.5 rounded-md font-medium text-slate-300 transition">
+                        <i class="fa-solid fa-grip mr-1"></i> Grid
+                    </button>
+                </div>
 
-      <!-- LOADING -->
+                <button onclick="openFormModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition flex items-center gap-2 shadow-md">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Tambah Anggota</span>
+                </button>
+            </div>
+        </div>
 
-      <div id="loading" class="loading">Memuat data...</div>
+        <!-- Main Display Container -->
+        <div id="tree-container" class="space-y-8">
+            <!-- Data Pohon atau Grid disajikan secara dinamis dari JS -->
+        </div>
 
-      <!-- FAMILY TREE -->
-
-      <section id="familyTree" class="family-tree"></section>
     </main>
 
-    <!-- =========================
-     LOGIN MODAL
-========================= -->
+    <!-- Modal Form Tambah / Edit -->
+    <div id="form-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
+                <h3 class="font-bold text-lg text-slate-100" id="form-title">Tambah Anggota Keluarga</h3>
+                <button onclick="closeFormModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
 
-    <div id="loginModal" class="modal hidden">
-      <div class="modal-box small">
-        <button class="close" onclick="closeModal('loginModal')">×</button>
+            <form id="member-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4 overflow-y-auto flex-1">
+                <input type="hidden" id="form-id">
 
-        <h2>Login Admin</h2>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Nama Lengkap *</label>
+                    <input type="text" id="form-nama" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                </div>
 
-        <form onsubmit="loginAdmin(event)">
-          <label>Username</label>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Jenis Kelamin</label>
+                        <select id="form-gender" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                            <option value="L">Laki-laki</option>
+                            <option value="P">Perempuan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Status</label>
+                        <select id="form-status" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                            <option value="Hidup">Hidup</option>
+                            <option value="Wafat">Wafat</option>
+                        </select>
+                    </div>
+                </div>
 
-          <input type="text" id="loginUsername" required />
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Generasi Ke-</label>
+                    <input type="number" id="form-generasi" min="1" max="20" value="1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                </div>
 
-          <label>Password</label>
+                <div class="grid grid-cols-2 gap-4 border-t border-slate-700/50 pt-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Ayah</label>
+                        <select id="form-ayah" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                            <option value="">-- Tidak Ada --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Ibu</label>
+                        <select id="form-ibu" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                            <option value="">-- Tidak Ada --</option>
+                        </select>
+                    </div>
+                </div>
 
-          <input type="password" id="loginPassword" required />
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Pasangan (Suami/Istri)</label>
+                    <select id="form-pasangan" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                        <option value="">-- Tidak Ada --</option>
+                    </select>
+                </div>
 
-          <button type="submit" class="btn btn-primary full">Login</button>
-        </form>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">URL Foto Profil</label>
+                    <input type="url" id="form-foto" placeholder="https://..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                </div>
 
-        <div id="loginError" class="error"></div>
-      </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Catatan / Bio Singkat</label>
+                    <textarea id="form-catatan" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"></textarea>
+                </div>
+
+                <div class="pt-3 flex justify-end gap-3">
+                    <button type="button" onclick="closeFormModal()" class="px-4 py-2 rounded-lg text-sm bg-slate-700 hover:bg-slate-600 text-slate-300">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Simpan Data</button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <!-- =========================
-     FORM MODAL
-========================= -->
+    <!-- Modal Pengaturan Config Web App Script -->
+    <div id="config-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-xl shadow-2xl p-6">
+            <h3 class="font-bold text-lg text-slate-100 mb-2">Pengaturan Google Apps Script API</h3>
+            <p class="text-xs text-slate-400 mb-4">Masukkan URL Web App dari Google Apps Script agar data tersimpan di Google Sheets secara real-time.</p>
 
-    <div id="formModal" class="modal hidden">
-      <div class="modal-box">
-        <button class="close" onclick="closeModal('formModal')">×</button>
+            <input type="url" id="script-url-input" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 mb-4">
 
-        <h2 id="formTitle">Tambah Anggota Keluarga</h2>
-
-        <form id="personForm" onsubmit="submitPerson(event)">
-          <input type="hidden" id="personId" />
-
-          <input type="hidden" id="oldPhoto" />
-
-          <div class="form-grid">
-            <div class="field">
-              <label>Nama Lengkap *</label>
-
-              <input type="text" id="nama" required />
+            <div class="flex justify-end gap-2">
+                <button onclick="closeConfigModal()" class="px-4 py-2 rounded-lg text-sm bg-slate-700 hover:bg-slate-600 text-slate-300">Tutup</button>
+                <button onclick="saveScriptUrl()" class="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Simpan & Hubungkan</button>
             </div>
-
-            <div class="field">
-              <label>Jenis Kelamin</label>
-
-              <select id="jenisKelamin">
-                <option value="">-- Pilih --</option>
-
-                <option value="Laki-laki">Laki-laki</option>
-
-                <option value="Perempuan">Perempuan</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label>Tanggal Lahir</label>
-
-              <input type="date" id="tanggalLahir" />
-            </div>
-
-            <div class="field">
-              <label>Hubungan</label>
-
-              <input
-                type="text"
-                id="hubungan"
-                placeholder="Contoh: Anak, Ayah, Ibu"
-              />
-            </div>
-
-            <div class="field">
-              <label>Ayah</label>
-
-              <input type="text" id="ayah" />
-            </div>
-
-            <div class="field">
-              <label>Ibu</label>
-
-              <input type="text" id="ibu" />
-            </div>
-
-            <div class="field">
-              <label>Pasangan</label>
-
-              <input type="text" id="pasangan" />
-            </div>
-
-            <div class="field full-width">
-              <label>Alamat</label>
-
-              <textarea
-                id="alamat"
-                rows="3"
-                placeholder="Masukkan alamat lengkap"
-              ></textarea>
-
-              <div class="maps-preview">
-                <button
-                  type="button"
-                  class="btn btn-map"
-                  onclick="previewMap()"
-                >
-                  📍 Cek Google Maps
-                </button>
-              </div>
-            </div>
-
-            <div class="field full-width">
-              <label>Deskripsi</label>
-
-              <textarea
-                id="deskripsi"
-                rows="4"
-                placeholder="Keterangan tambahan..."
-              ></textarea>
-            </div>
-
-            <div class="field full-width">
-              <label>Foto</label>
-
-              <input
-                type="file"
-                id="foto"
-                accept="image/*"
-                onchange="previewPhoto(event)"
-              />
-
-              <small> Maksimal 5 MB </small>
-
-              <div id="photoPreview" class="photo-preview"></div>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              onclick="closeModal('formModal')"
-            >
-              Batal
-            </button>
-
-            <button type="submit" class="btn btn-primary" id="saveBtn">
-              Simpan
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
     </div>
 
-    <!-- =========================
-     DETAIL MODAL
-========================= -->
-
-    <div id="detailModal" class="modal hidden">
-      <div class="modal-box">
-        <button class="close" onclick="closeModal('detailModal')">×</button>
-
-        <div id="detailContent"></div>
-      </div>
-    </div>
-
-    <!-- =========================
-     IMAGE LIGHTBOX
-========================= -->
-
-    <div
-      id="imageModal"
-      class="image-modal hidden"
-      onclick="closeModal('imageModal')"
-    >
-      <button class="image-close">×</button>
-
-      <img id="largeImage" src="" alt="Foto" />
+    <!-- Drawer / Modal Detail Anggota -->
+    <div id="detail-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden p-6 relative">
+            <button onclick="closeDetailModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div id="detail-content">
+                <!-- Diisi via JS -->
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
-  </body>
+</body>
 </html>
