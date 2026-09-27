@@ -13,31 +13,27 @@
     border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: #475569;
+/* Garis Cabang Pohon Silsilah (Tree CSS) */
+.tree-node {
+    position: relative;
 }
 
-/* Card Styling & Hover Effects */
+.tree-line-v {
+    width: 2px;
+    background-color: #475569;
+    margin: 0 auto;
+}
+
+.tree-line-h {
+    height: 2px;
+    background-color: #475569;
+}
+
 .member-card {
     transition: all 0.2s ease-in-out;
 }
 
 .member-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
-}
-
-/* Connective Line styling */
-.line-connector {
-    position: relative;
-}
-
-.line-connector::before {
-    content: '';
-    position: absolute;
-    top: -16px;
-    left: 50%;
-    width: 2px;
-    height: 16px;
-    background-color: #475569;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
 }
