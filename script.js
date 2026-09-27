@@ -99,7 +99,7 @@ async function saveDataToDatabase() {
 // 2. PEMPROSESAN & UPLOAD FOTO PROFIL
 // ------------------------------------------------------------
 // ------------------------------------------------------------
-// UNGGAH FOTO PROFIL LANGSUNG KE GOOGLE DRIVE FOLDER
+// UNGGAH FOTO PROFIL KE FOLDER "Silsilah_Foto_Profil" DI DRIVE
 // ------------------------------------------------------------
 async function handleFileSelect(event) {
     const file = event.target.files[0];
@@ -112,51 +112,52 @@ async function handleFileSelect(event) {
     }
 
     try {
-        // 1. Kompres gambar di browser agar proses unggah cepat (~50KB)
+        // 1. Kompres gambar di browser agar proses kirim ringan (~30KB-60KB)
         const compressedBase64 = await resizeAndCompressImage(file, 400, 400, 0.8);
 
-        // 2. Jika SCRIPT_URL belum diset, gunakan Base64 lokal
+        // Jika URL Apps Script belum diisi, gunakan data Base64 lokal
         if (!SCRIPT_URL || SCRIPT_URL.includes("YOUR_SCRIPT_ID_HERE")) {
             document.getElementById('form-foto').value = compressedBase64;
             if (statusElem) {
-                statusElem.innerText = "✓ Tersimpan sementara (Mode Lokal). Set URL Apps Script untuk unggah ke Drive.";
+                statusElem.innerText = "✓ Tersimpan lokal. Atur SCRIPT_URL untuk unggah ke Google Drive.";
                 statusElem.className = "text-[10px] text-emerald-400 mt-1 block font-semibold";
             }
             return;
         }
 
-        // 3. Kirim payload POST ke Google Apps Script
-        const payload = {
-            action: 'uploadFoto',
-            fileName: `foto_${Date.now()}_${file.name}`,
-            mimeType: file.type || 'image/jpeg',
-            base64: compressedBase64
-        };
+        // 2. Gunakan URLSearchParams untuk menghindari masalah CORS Google Apps Script
+        const formData = new URLSearchParams();
+        formData.append('action', 'uploadFoto');
+        formData.append('fileName', `foto_${Date.now()}_${file.name}`);
+        formData.append('mimeType', file.type || 'image/jpeg');
+        formData.append('base64', compressedBase64);
 
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(payload)
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
         });
 
         const result = await response.json();
 
         if (result.status === 'success' && result.url) {
-            // Pasang URL Google Drive ke input form
+            // Pasang URL gambar Google Drive ke kolom foto
             document.getElementById('form-foto').value = result.url;
             
             if (statusElem) {
-                statusElem.innerText = "✓ Foto berhasil diunggah dan tersimpan di folder Drive!";
+                statusElem.innerText = "✓ Foto berhasil tersimpan di folder Drive (Silsilah_Foto_Profil)!";
                 statusElem.className = "text-[10px] text-emerald-400 mt-1 block font-semibold";
             }
         } else {
-            throw new Error(result.message || "Gagal mengunggah gambar ke Drive");
+            throw new Error(result.message || "Gagal mengunggah foto ke Drive");
         }
 
     } catch (err) {
         console.error("Gagal unggah foto:", err);
         if (statusElem) {
-            statusElem.innerText = "Gagal mengunggah foto ke Drive. Memakai fallback penyimpanan lokal.";
+            statusElem.innerText = "Gagal mengunggah ke Drive. Memakai simpan sementara.";
             statusElem.className = "text-[10px] text-rose-400 mt-1 block";
         }
     }
