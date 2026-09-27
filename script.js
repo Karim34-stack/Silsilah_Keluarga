@@ -190,6 +190,92 @@ function renderTreeView(container, filteredMembers) {
     });
 }
 
+// Render Tampilan Pohon Rekursif Berabang
+function renderTreeView(container, filteredMembers) {
+    // Cari Akar Keluarga (Anggota tanpa Ayah & Ibu)
+    const roots = filteredMembers.filter(m => !m.ayahId && !m.ibuId);
+
+    if (roots.length === 0) {
+        container.innerHTML = `<div class="text-center py-12 text-slate-500">Tidak ada akar silsilah yang cocok.</div>`;
+        return;
+    }
+
+    const treeWrapper = document.createElement('div');
+    treeWrapper.className = 'flex flex-col items-center gap-12 overflow-x-auto py-6';
+
+    roots.forEach(root => {
+        // Jika akar sudah menjadi pasangan dari akar lain yang diproses, lewati agar tidak ganda
+        const isSpouseProcessed = roots.some(r => r.id === root.pasanganId && r.id < root.id);
+        if (!isSpouseProcessed) {
+            treeWrapper.appendChild(buildTreeNode(root, filteredMembers));
+        }
+    });
+
+    container.appendChild(treeWrapper);
+}
+
+// Fungsi Rekursif Membuat Node Pohon Beserta Cabang Anak
+function buildTreeNode(member, allMembers) {
+    const nodeContainer = document.createElement('div');
+    nodeContainer.className = 'flex flex-col items-center tree-node';
+
+    // Kartu Anggota + Pasangan
+    const spouse = allMembers.find(m => m.id === member.pasanganId);
+    const coupleBox = document.createElement('div');
+    coupleBox.className = 'flex items-center gap-2 relative bg-slate-800/80 p-2 rounded-2xl border border-slate-700/80 shadow-lg';
+
+    coupleBox.appendChild(createMemberCard(member));
+    if (spouse) {
+        const heartBadge = document.createElement('div');
+        heartBadge.className = 'text-pink-500 text-xs font-bold px-1';
+        heartBadge.innerHTML = '<i class="fa-solid fa-heart"></i>';
+        coupleBox.appendChild(heartBadge);
+        coupleBox.appendChild(createMemberCard(spouse));
+    }
+
+    nodeContainer.appendChild(coupleBox);
+
+    // Cari Anak-Anak
+    const children = allMembers.filter(m => 
+        (m.ayahId === member.id || m.ibuId === member.id) ||
+        (spouse && (m.ayahId === spouse.id || m.ibuId === spouse.id))
+    );
+
+    if (children.length > 0) {
+        // Garis Vertikal Turun
+        const lineDown = document.createElement('div');
+        lineDown.className = 'tree-line-v h-6';
+        nodeContainer.appendChild(lineDown);
+
+        // Container Cabang Anak
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = 'flex items-start justify-center relative pt-4';
+
+        // Garis Horisontal Penghubung Cabang
+        if (children.length > 1) {
+            const lineHorizontal = document.createElement('div');
+            lineHorizontal.className = 'tree-line-h absolute top-0 left-1/4 right-1/4';
+            childrenContainer.appendChild(lineHorizontal);
+        }
+
+        children.forEach(child => {
+            const childWrapper = document.createElement('div');
+            childWrapper.className = 'flex flex-col items-center px-4 relative';
+
+            // Garis Vertikal Atas Anak
+            const lineUp = document.createElement('div');
+            lineUp.className = 'tree-line-v h-4 absolute -top-4';
+            childWrapper.appendChild(lineUp);
+
+            childWrapper.appendChild(buildTreeNode(child, allMembers));
+            childrenContainer.appendChild(childWrapper);
+        });
+
+        nodeContainer.appendChild(childrenContainer);
+    }
+
+    return nodeContainer;
+}
 // Render Tampilan Grid Kartu
 function renderGridView(container, filteredMembers) {
     const grid = document.createElement('div');
