@@ -1,419 +1,246 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
+  <head>
+    <meta charset="UTF-8" />
 
-<head>
-  <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+    <title>Silsilah Keluarga</title>
 
-  <title>Silsilah Keluarga</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-  <link
-    rel="stylesheet"
-    href="style.css"
-  >
-</head>
+  <body>
+    <header class="header">
+      <div class="header-content">
+        <div>
+          <h1>🌳 Silsilah Keluarga</h1>
 
-<body>
+          <p>Dokumentasi keluarga dan hubungan kekerabatan</p>
+        </div>
 
-<header class="header">
+        <button id="loginBtn" class="btn btn-light" onclick="openLogin()">
+          🔐 Login Admin
+        </button>
 
-  <div class="header-content">
+        <button
+          id="logoutBtn"
+          class="btn btn-danger hidden"
+          onclick="logoutAdmin()"
+        >
+          Logout
+        </button>
+      </div>
+    </header>
 
-    <div>
-      <h1>🌳 Silsilah Keluarga</h1>
+    <main class="container">
+      <!-- TOOLBAR -->
 
-      <p>
-        Dokumentasi keluarga dan hubungan kekerabatan
-      </p>
-    </div>
+      <section class="toolbar">
+        <input
+          type="search"
+          id="searchInput"
+          placeholder="🔎 Cari nama anggota keluarga..."
+          oninput="render()"
+        />
 
-    <button
-      id="loginBtn"
-      class="btn btn-light"
-      onclick="openLogin()"
-    >
-      🔐 Login Admin
-    </button>
+        <button class="btn btn-primary" onclick="openAddModal()">
+          ➕ Tambah Anggota
+        </button>
+      </section>
 
-    <button
-      id="logoutBtn"
-      class="btn btn-danger hidden"
-      onclick="logoutAdmin()"
-    >
-      Logout
-    </button>
+      <!-- LOADING -->
 
-  </div>
+      <div id="loading" class="loading">Memuat data...</div>
 
-</header>
+      <!-- FAMILY TREE -->
 
+      <section id="familyTree" class="family-tree"></section>
+    </main>
 
-<main class="container">
-
-  <!-- TOOLBAR -->
-
-  <section class="toolbar">
-
-    <input
-      type="search"
-      id="searchInput"
-      placeholder="🔎 Cari nama anggota keluarga..."
-      oninput="render()"
-    >
-
-    <button
-      class="btn btn-primary"
-      onclick="openAddModal()"
-    >
-      ➕ Tambah Anggota
-    </button>
-
-  </section>
-
-
-  <!-- LOADING -->
-
-  <div
-    id="loading"
-    class="loading"
-  >
-    Memuat data...
-  </div>
-
-
-  <!-- FAMILY TREE -->
-
-  <section
-    id="familyTree"
-    class="family-tree"
-  ></section>
-
-</main>
-
-
-<!-- =========================
+    <!-- =========================
      LOGIN MODAL
 ========================= -->
 
-<div
-  id="loginModal"
-  class="modal hidden"
->
+    <div id="loginModal" class="modal hidden">
+      <div class="modal-box small">
+        <button class="close" onclick="closeModal('loginModal')">×</button>
 
-  <div class="modal-box small">
+        <h2>Login Admin</h2>
 
-    <button
-      class="close"
-      onclick="closeModal('loginModal')"
-    >
-      ×
-    </button>
+        <form onsubmit="loginAdmin(event)">
+          <label>Username</label>
 
-    <h2>Login Admin</h2>
+          <input type="text" id="loginUsername" required />
 
-    <form onsubmit="loginAdmin(event)">
+          <label>Password</label>
 
-      <label>Username</label>
+          <input type="password" id="loginPassword" required />
 
-      <input
-        type="text"
-        id="loginUsername"
-        required
-      >
+          <button type="submit" class="btn btn-primary full">Login</button>
+        </form>
 
-      <label>Password</label>
+        <div id="loginError" class="error"></div>
+      </div>
+    </div>
 
-      <input
-        type="password"
-        id="loginPassword"
-        required
-      >
-
-      <button
-        type="submit"
-        class="btn btn-primary full"
-      >
-        Login
-      </button>
-
-    </form>
-
-    <div
-      id="loginError"
-      class="error"
-    ></div>
-
-  </div>
-
-</div>
-
-
-<!-- =========================
+    <!-- =========================
      FORM MODAL
 ========================= -->
 
-<div
-  id="formModal"
-  class="modal hidden"
->
+    <div id="formModal" class="modal hidden">
+      <div class="modal-box">
+        <button class="close" onclick="closeModal('formModal')">×</button>
 
-  <div class="modal-box">
+        <h2 id="formTitle">Tambah Anggota Keluarga</h2>
 
-    <button
-      class="close"
-      onclick="closeModal('formModal')"
-    >
-      ×
-    </button>
+        <form id="personForm" onsubmit="submitPerson(event)">
+          <input type="hidden" id="personId" />
 
-    <h2 id="formTitle">
-      Tambah Anggota Keluarga
-    </h2>
+          <input type="hidden" id="oldPhoto" />
 
-    <form
-      id="personForm"
-      onsubmit="submitPerson(event)"
-    >
+          <div class="form-grid">
+            <div class="field">
+              <label>Nama Lengkap *</label>
 
-      <input
-        type="hidden"
-        id="personId"
-      >
+              <input type="text" id="nama" required />
+            </div>
 
-      <input
-        type="hidden"
-        id="oldPhoto"
-      >
+            <div class="field">
+              <label>Jenis Kelamin</label>
 
+              <select id="jenisKelamin">
+                <option value="">-- Pilih --</option>
 
-      <div class="form-grid">
+                <option value="Laki-laki">Laki-laki</option>
 
-        <div class="field">
-          <label>Nama Lengkap *</label>
+                <option value="Perempuan">Perempuan</option>
+              </select>
+            </div>
 
-          <input
-            type="text"
-            id="nama"
-            required
-          >
-        </div>
+            <div class="field">
+              <label>Tanggal Lahir</label>
 
+              <input type="date" id="tanggalLahir" />
+            </div>
 
-        <div class="field">
-          <label>Jenis Kelamin</label>
+            <div class="field">
+              <label>Hubungan</label>
 
-          <select id="jenisKelamin">
+              <input
+                type="text"
+                id="hubungan"
+                placeholder="Contoh: Anak, Ayah, Ibu"
+              />
+            </div>
 
-            <option value="">
-              -- Pilih --
-            </option>
+            <div class="field">
+              <label>Ayah</label>
 
-            <option value="Laki-laki">
-              Laki-laki
-            </option>
+              <input type="text" id="ayah" />
+            </div>
 
-            <option value="Perempuan">
-              Perempuan
-            </option>
+            <div class="field">
+              <label>Ibu</label>
 
-          </select>
+              <input type="text" id="ibu" />
+            </div>
 
-        </div>
+            <div class="field">
+              <label>Pasangan</label>
 
+              <input type="text" id="pasangan" />
+            </div>
 
-        <div class="field">
-          <label>Tanggal Lahir</label>
+            <div class="field full-width">
+              <label>Alamat</label>
 
-          <input
-            type="date"
-            id="tanggalLahir"
-          >
-        </div>
+              <textarea
+                id="alamat"
+                rows="3"
+                placeholder="Masukkan alamat lengkap"
+              ></textarea>
 
+              <div class="maps-preview">
+                <button
+                  type="button"
+                  class="btn btn-map"
+                  onclick="previewMap()"
+                >
+                  📍 Cek Google Maps
+                </button>
+              </div>
+            </div>
 
-        <div class="field">
-          <label>Hubungan</label>
+            <div class="field full-width">
+              <label>Deskripsi</label>
 
-          <input
-            type="text"
-            id="hubungan"
-            placeholder="Contoh: Anak, Ayah, Ibu"
-          >
-        </div>
+              <textarea
+                id="deskripsi"
+                rows="4"
+                placeholder="Keterangan tambahan..."
+              ></textarea>
+            </div>
 
+            <div class="field full-width">
+              <label>Foto</label>
 
-        <div class="field">
-          <label>Ayah</label>
+              <input
+                type="file"
+                id="foto"
+                accept="image/*"
+                onchange="previewPhoto(event)"
+              />
 
-          <input
-            type="text"
-            id="ayah"
-          >
-        </div>
+              <small> Maksimal 5 MB </small>
 
-
-        <div class="field">
-          <label>Ibu</label>
-
-          <input
-            type="text"
-            id="ibu"
-          >
-        </div>
-
-
-        <div class="field">
-          <label>Pasangan</label>
-
-          <input
-            type="text"
-            id="pasangan"
-          >
-        </div>
-
-
-        <div class="field full-width">
-          <label>Alamat</label>
-
-          <textarea
-            id="alamat"
-            rows="3"
-            placeholder="Masukkan alamat lengkap"
-          ></textarea>
-
-          <div class="maps-preview">
-
-            <button
-              type="button"
-              class="btn btn-map"
-              onclick="previewMap()"
-            >
-              📍 Cek Google Maps
-            </button>
-
+              <div id="photoPreview" class="photo-preview"></div>
+            </div>
           </div>
 
-        </div>
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="closeModal('formModal')"
+            >
+              Batal
+            </button>
 
-
-        <div class="field full-width">
-
-          <label>Deskripsi</label>
-
-          <textarea
-            id="deskripsi"
-            rows="4"
-            placeholder="Keterangan tambahan..."
-          ></textarea>
-
-        </div>
-
-
-        <div class="field full-width">
-
-          <label>Foto</label>
-
-          <input
-            type="file"
-            id="foto"
-            accept="image/*"
-            onchange="previewPhoto(event)"
-          >
-
-          <small>
-            Maksimal 5 MB
-          </small>
-
-          <div
-            id="photoPreview"
-            class="photo-preview"
-          ></div>
-
-        </div>
-
+            <button type="submit" class="btn btn-primary" id="saveBtn">
+              Simpan
+            </button>
+          </div>
+        </form>
       </div>
+    </div>
 
-
-      <div class="form-actions">
-
-        <button
-          type="button"
-          class="btn btn-secondary"
-          onclick="closeModal('formModal')"
-        >
-          Batal
-        </button>
-
-        <button
-          type="submit"
-          class="btn btn-primary"
-          id="saveBtn"
-        >
-          Simpan
-        </button>
-
-      </div>
-
-    </form>
-
-  </div>
-
-</div>
-
-
-<!-- =========================
+    <!-- =========================
      DETAIL MODAL
 ========================= -->
 
-<div
-  id="detailModal"
-  class="modal hidden"
->
+    <div id="detailModal" class="modal hidden">
+      <div class="modal-box">
+        <button class="close" onclick="closeModal('detailModal')">×</button>
 
-  <div class="modal-box">
+        <div id="detailContent"></div>
+      </div>
+    </div>
 
-    <button
-      class="close"
-      onclick="closeModal('detailModal')"
-    >
-      ×
-    </button>
-
-    <div id="detailContent"></div>
-
-  </div>
-
-</div>
-
-
-<!-- =========================
+    <!-- =========================
      IMAGE LIGHTBOX
 ========================= -->
 
-<div
-  id="imageModal"
-  class="image-modal hidden"
-  onclick="closeModal('imageModal')"
->
+    <div
+      id="imageModal"
+      class="image-modal hidden"
+      onclick="closeModal('imageModal')"
+    >
+      <button class="image-close">×</button>
 
-  <button class="image-close">
-    ×
-  </button>
+      <img id="largeImage" src="" alt="Foto" />
+    </div>
 
-  <img
-    id="largeImage"
-    src=""
-    alt="Foto"
-  >
-
-</div>
-
-
-<script src="script.js"></script>
-
-</body>
+    <script src="script.js"></script>
+  </body>
 </html>
