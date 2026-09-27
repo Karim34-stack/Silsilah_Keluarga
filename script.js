@@ -148,6 +148,9 @@ async function handleFileSelect(event) {
 // ------------------------------------------------------------
 // 3. LOGIKA RENDER POHON & FILTER AKAR KELUARGA
 // ------------------------------------------------------------
+// ------------------------------------------------------------
+// LOGIKA RENDER & FILTERING
+// ------------------------------------------------------------
 function renderApp() {
     updateFilterOptions();
     const container = document.getElementById('tree-container');
@@ -159,14 +162,14 @@ function renderApp() {
     const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
     const selectedRoot = document.getElementById('filter-root')?.value || 'ALL';
 
-    let filtered = members.filter(m => m.nama.toLowerCase().includes(searchQuery));
+    let filtered = members.filter(m => (m.nama || '').toLowerCase().includes(searchQuery));
 
     // Filter berdasarkan Generasi
     if (selectedGen !== 'ALL') {
-        filtered = filtered.filter(m => m.generasi === parseInt(selectedGen));
+        filtered = filtered.filter(m => (parseInt(m.generasi) || 1) === parseInt(selectedGen));
     }
 
-    // Filter berdasarkan Akar Keluarga (Root/Leluhur)
+    // Filter berdasarkan Akar Keluarga (Leluhur terpilih + seluruh keturunannya)
     if (selectedRoot !== 'ALL') {
         const descendantIds = getAllDescendantsAndSpouses(selectedRoot);
         filtered = filtered.filter(m => descendantIds.has(m.id));
@@ -377,28 +380,53 @@ function createMemberCard(m) {
 // ------------------------------------------------------------
 // 4. PEMBARUAN OPSI FILTER DROPDOWN
 // ------------------------------------------------------------
+// ------------------------------------------------------------
+// PEMBARUAN OPSI FILTER DROPDOWN (AKAR KELUARGA & GENERASI)
+// ------------------------------------------------------------
 function updateFilterOptions() {
     // 1. Update Filter Generasi
     const genSelect = document.getElementById('filter-gen');
     if (genSelect) {
         const currentVal = genSelect.value;
-        const genList = [...new Set(members.map(m => m.generasi))].sort((a, b) => a - b);
+        const genList = [...new Set(members.map(m => parseInt(m.generasi) || 1))].sort((a, b) => a - b);
+        
         genSelect.innerHTML = `<option value="ALL">Semua Generasi</option>`;
-        genList.forEach(g => genSelect.innerHTML += `<option value="${g}">Generasi ${g}</option>`);
+        genList.forEach(g => {
+            genSelect.innerHTML += `<option value="${g}">Generasi ${g}</option>`;
+        });
         genSelect.value = currentVal;
     }
 
-    // 2. Update Filter Akar Keluarga (Paling Atas / Tanpa Orang Tua)
+    // 2. Update Filter Akar Keluarga (Paling Atas / Tanpa Orang Tua / Generasi Teratas)
     const rootSelect = document.getElementById('filter-root');
     if (rootSelect) {
         const currentVal = rootSelect.value;
-        const rootMembers = members.filter(m => !m.ayahId && !m.ibuId);
         
-        rootSelect.innerHTML = `<option value="ALL">Semua Akar Keluarga</option>`;
-        rootMembers.forEach(r => {
-            rootSelect.innerHTML += `<option value="${r.id}">${r.nama} (Gen ${r.generasi})</option>`;
+        // Deteksi anggota yang tidak memiliki ayah DAN ibu (Leluhur/Akar)
+        let rootMembers = members.filter(m => {
+            const hasNoAyah = !m.ayahId || m.ayahId.toString().trim() === "" || m.ayahId === "undefined";
+            const hasNoIbu = !m.ibuId || m.ibuId.toString().trim() === "" || m.ibuId === "undefined";
+            return hasNoAyah && hasNoIbu;
         });
-        rootSelect.value = currentVal;
+
+        // Jika tidak ada yang cocok, ambil semua anggota Generasi 1 sebagai cadangan
+        if (rootMembers.length === 0) {
+            const minGen = Math.min(...members.map(m => parseInt(m.generasi) || 1));
+            rootMembers = members.filter(m => (parseInt(m.generasi) || 1) === minGen);
+        }
+
+        rootSelect.innerHTML = `<option value="ALL">Semua Akar Keluarga</option>`;
+        
+        rootMembers.forEach(r => {
+            rootSelect.innerHTML += `<option value="${r.id}">${r.nama} (Gen ${r.generasi || 1})</option>`;
+        });
+
+        // Jaga agar nilai opsi yang terpilih tidak ter-reset
+        if ([...rootSelect.options].some(opt => opt.value === currentVal)) {
+            rootSelect.value = currentVal;
+        } else {
+            rootSelect.value = "ALL";
+        }
     }
 }
 
