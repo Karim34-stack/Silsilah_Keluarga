@@ -1,59 +1,49 @@
 // ============================================================
-// KONFIGURASI DATABASE GOOGLE SHEETS (TERHUBUNG OTOMATIS)
+// KONFIGURASI DATABASE GOOGLE SHEETS
 // ============================================================
-// Tempelkan URL Google Apps Script Web App Anda di sini:
+// Ganti URL di bawah dengan Web App URL Google Apps Script Anda:
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLSVQPcbETmXAna8tSs7uIweqzM1HJpbn9lExO7kyPa_Hcr6e0Pyw8CtBCSMve9a3_Xg/exec";
 
-// State Utama Aplikasi
+// State Utama
 let members = [];
 let isAdmin = false;
-let viewMode = 'tree'; // Mode tampilan: 'tree' | 'grid'
-let renderedMemberIds = new Set(); // Mencegah duplikasi kartu di Pohon
+let viewMode = 'tree';
+let renderedMemberIds = new Set(); // Mencegah duplikasi kartu
+const ADMIN_PIN = "1234";
 
-const ADMIN_PIN = "1234"; // PIN default mode admin
-
-// Data Cadangan Default (Jika spreadsheet masih kosong)
+// Data Cadangan Default
 const defaultMembers = [
     { id: "m1", nama: "Kaidi", gender: "L", generasi: 1, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m2", foto: "", catatan: "Kakek" },
     { id: "m2", nama: "Tukirah", gender: "P", generasi: 1, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m1", foto: "", catatan: "Nenek" },
-    { id: "m3", nama: "Budi Santoso", gender: "L", generasi: 2, status: "Hidup", ayahId: "m1", ibuId: "m2", pasanganId: "m4", foto: "", catatan: "Anak Pertama" },
+    { id: "m3", nama: "Budi Santoso", gender: "L", generasi: 2, status: "Hidup", ayahId: "m1", ibuId: "m2", pasanganId: "m4", foto: "", catatan: "Anak 1" },
     { id: "m4", nama: "Wiwit", gender: "P", generasi: 2, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m3", foto: "", catatan: "Istri Budi" },
-    { id: "m5", nama: "Zeni DS", gender: "P", generasi: 2, status: "Hidup", ayahId: "m1", ibuId: "m2", pasanganId: "", foto: "", catatan: "Anak Kedua" },
-    { id: "m6", nama: "Kana Zs", gender: "P", generasi: 3, status: "Hidup", ayahId: "m3", ibuId: "m4", pasanganId: "", foto: "", catatan: "Cucu" }
+    { id: "m5", nama: "Kana Zs", gender: "P", generasi: 3, status: "Hidup", ayahId: "m3", ibuId: "m4", pasanganId: "", foto: "", catatan: "Cucu" }
 ];
 
-// Inisialisasi Aplikasi Saat Halaman Dimuat
 document.addEventListener('DOMContentLoaded', () => {
-    // Langsung ambil data dari Google Sheets tanpa input manual
     fetchDataFromDatabase();
 });
 
-// Update Badge Status Database
+// Indikator Koneksi Status
 function updateDbBadge(status, text) {
     const dot = document.getElementById('status-dot');
     const label = document.getElementById('status-text');
 
     if (label) label.innerText = text;
     if (dot) {
-        if (status === 'connected') {
-            dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
-        } else if (status === 'loading') {
-            dot.className = "w-2.5 h-2.5 rounded-full bg-sky-400 animate-ping";
-        } else {
-            dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
-        }
+        if (status === 'connected') dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
+        else if (status === 'loading') dot.className = "w-2.5 h-2.5 rounded-full bg-sky-400 animate-ping";
+        else dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
     }
 }
 
-// ============================================================
-// 1. OTOMATIS AMBIL DATA DARI DATABASE (GET / READ)
-// ============================================================
+// ------------------------------------------------------------
+// 1. KONEKSI GOOGLE SHEETS
+// ------------------------------------------------------------
 async function fetchDataFromDatabase() {
     updateDbBadge('loading', 'Menghubungkan Database...');
 
-    // Jika URL belum diganti/diisi
     if (!SCRIPT_URL || SCRIPT_URL.includes("YOUR_SCRIPT_ID_HERE")) {
-        console.warn("URL Script belum diset. Menggunakan data Lokal.");
         loadLocalStorage();
         return;
     }
@@ -67,11 +57,9 @@ async function fetchDataFromDatabase() {
                 ...item,
                 generasi: parseInt(item.generasi) || 1
             }));
-            // Backup data terbaru ke LocalStorage
             localStorage.setItem('local_members', JSON.stringify(members));
             updateDbBadge('connected', 'Google Sheets Terhubung');
         } else {
-            // Jika spreadsheet kosong
             loadLocalStorage();
         }
     } catch (err) {
@@ -88,11 +76,7 @@ function loadLocalStorage() {
     renderApp();
 }
 
-// ============================================================
-// 2. OTOMATIS SIMPAN KE DATABASE (POST / SAVE)
-// ============================================================
 async function saveDataToDatabase() {
-    // 1. Simpan ke LocalStorage dulu agar respons cepat
     localStorage.setItem('local_members', JSON.stringify(members));
     renderApp();
 
@@ -105,24 +89,68 @@ async function saveDataToDatabase() {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({
-                action: 'saveAll',
-                members: members
-            })
+            body: JSON.stringify({ action: 'saveAll', members: members })
         });
 
-        setTimeout(() => {
-            updateDbBadge('connected', 'Google Sheets Terhubung');
-        }, 800);
+        setTimeout(() => updateDbBadge('connected', 'Google Sheets Terhubung'), 800);
     } catch (err) {
         console.error('Save Error:', err);
         updateDbBadge('offline', 'Gagal Simpan ke Sheets');
     }
 }
 
-// ============================================================
-// 3. RENDER POHON SILSILAH TANPA DUPLIKASI
-// ============================================================
+// ------------------------------------------------------------
+// 2. FITUR UPLOAD FOTO KE GOOGLE DRIVE
+// ------------------------------------------------------------
+async function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const statusElem = document.getElementById('upload-status');
+    if (statusElem) {
+        statusElem.innerText = "Mengunggah foto ke Google Drive...";
+        statusElem.className = "text-[10px] text-amber-400 mt-1 block animate-pulse";
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const base64Data = e.target.result;
+
+        try {
+            const res = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({
+                    action: 'uploadPhoto',
+                    fileName: `photo_${Date.now()}_${file.name}`,
+                    mimeType: file.type,
+                    fileData: base64Data
+                })
+            });
+
+            const result = await res.json();
+            if (result.status === 'success' && result.photoUrl) {
+                document.getElementById('form-foto').value = result.photoUrl;
+                if (statusElem) {
+                    statusElem.innerText = "Foto berhasil diunggah!";
+                    statusElem.className = "text-[10px] text-emerald-400 mt-1 block";
+                }
+            }
+        } catch (err) {
+            console.error("Upload error:", err);
+            if (statusElem) {
+                statusElem.innerText = "Foto terkirim ke latar belakang (Cek beberapa saat lagi).";
+                statusElem.className = "text-[10px] text-sky-400 mt-1 block";
+            }
+        }
+    };
+
+    reader.readAsDataURL(file);
+}
+
+// ------------------------------------------------------------
+// 3. LOGIKA RENDER POHON VISUAL (ANTI-DUPLIKAT)
+// ------------------------------------------------------------
 function renderApp() {
     updateFilterOptions();
     const container = document.getElementById('tree-container');
@@ -130,11 +158,8 @@ function renderApp() {
 
     container.innerHTML = '';
 
-    const searchInput = document.getElementById('search-input');
-    const filterGenSelect = document.getElementById('filter-gen');
-
-    const searchQuery = searchInput ? searchInput.value.toLowerCase() : '';
-    const selectedGen = filterGenSelect ? filterGenSelect.value : 'ALL';
+    const searchQuery = (document.getElementById('search-input')?.value || '').toLowerCase();
+    const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
 
     let filtered = members.filter(m => m.nama.toLowerCase().includes(searchQuery));
     if (selectedGen !== 'ALL') {
@@ -154,10 +179,8 @@ function renderApp() {
 }
 
 function renderTreeView(container, filteredMembers) {
-    // Reset tracker global untuk cegah ganda
-    renderedMemberIds = new Set();
+    renderedMemberIds = new Set(); // Reset tracker duplikat
 
-    // Cari akar keluarga
     let rootCandidates = filteredMembers.filter(m => !m.ayahId && !m.ibuId);
 
     if (rootCandidates.length === 0 && filteredMembers.length > 0) {
@@ -186,11 +209,9 @@ function buildTreeNode(member, allMembers) {
     const nodeContainer = document.createElement('div');
     nodeContainer.className = 'flex flex-col items-center tree-node';
 
-    // Pasangan
     const spouse = allMembers.find(m => m.id === member.pasanganId);
     if (spouse) renderedMemberIds.add(spouse.id);
 
-    // Kotak Keluarga
     const coupleBox = document.createElement('div');
     coupleBox.className = 'flex items-center gap-2 relative bg-slate-800/80 p-2 rounded-2xl border border-slate-700/80 shadow-lg';
 
@@ -205,7 +226,6 @@ function buildTreeNode(member, allMembers) {
 
     nodeContainer.appendChild(coupleBox);
 
-    // Anak-anak
     const children = allMembers.filter(m => {
         if (renderedMemberIds.has(m.id)) return false;
         const isChildOfMember = (m.ayahId && m.ayahId === member.id) || (m.ibuId && m.ibuId === member.id);
@@ -252,7 +272,6 @@ function buildTreeNode(member, allMembers) {
     return nodeContainer;
 }
 
-// Render Mode Grid
 function renderGridView(container, filteredMembers) {
     const grid = document.createElement('div');
     grid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4';
@@ -260,7 +279,6 @@ function renderGridView(container, filteredMembers) {
     container.appendChild(grid);
 }
 
-// Element Kartu Anggota
 function createMemberCard(m) {
     const card = document.createElement('div');
     card.className = "member-card bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col justify-between relative shadow-md group w-full max-w-xs";
@@ -320,7 +338,39 @@ function createMemberCard(m) {
     return card;
 }
 
-// Tambah Kerabat Cepat
+// ------------------------------------------------------------
+// 4. KELOLA DATA & MODAL
+// ------------------------------------------------------------
+function handleFormSubmit(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('form-id').value || 'm_' + Date.now();
+    const newMember = {
+        id: id,
+        nama: document.getElementById('form-nama').value,
+        gender: document.getElementById('form-gender').value,
+        status: document.getElementById('form-status').value,
+        generasi: parseInt(document.getElementById('form-generasi').value) || 1,
+        ayahId: document.getElementById('form-ayah').value,
+        ibuId: document.getElementById('form-ibu').value,
+        pasanganId: document.getElementById('form-pasangan').value,
+        foto: document.getElementById('form-foto').value,
+        catatan: document.getElementById('form-catatan').value
+    };
+
+    const index = members.findIndex(m => m.id === id);
+    if (index >= 0) members[index] = newMember;
+    else members.push(newMember);
+
+    if (newMember.pasanganId) {
+        const spouse = members.find(m => m.id === newMember.pasanganId);
+        if (spouse) spouse.pasanganId = id;
+    }
+
+    closeFormModal();
+    saveDataToDatabase();
+}
+
 function quickAddRelative(targetId, type) {
     const target = members.find(m => m.id === targetId);
     if (!target) return;
@@ -345,49 +395,8 @@ function quickAddRelative(targetId, type) {
     }
 }
 
-// ============================================================
-// 4. KELOLA FORM & MODAL
-// ============================================================
-function handleFormSubmit(e) {
-    e.preventDefault();
-
-    const id = document.getElementById('form-id').value || 'm_' + Date.now();
-    const newMember = {
-        id: id,
-        nama: document.getElementById('form-nama').value,
-        gender: document.getElementById('form-gender').value,
-        status: document.getElementById('form-status').value,
-        generasi: parseInt(document.getElementById('form-generasi').value) || 1,
-        ayahId: document.getElementById('form-ayah').value,
-        ibuId: document.getElementById('form-ibu').value,
-        pasanganId: document.getElementById('form-pasangan').value,
-        foto: document.getElementById('form-foto').value,
-        catatan: document.getElementById('form-catatan').value
-    };
-
-    const index = members.findIndex(m => m.id === id);
-    if (index >= 0) {
-        members[index] = newMember;
-    } else {
-        members.push(newMember);
-    }
-
-    // Hubungkan pasangan dua arah secara otomatis
-    if (newMember.pasanganId) {
-        const spouse = members.find(m => m.id === newMember.pasanganId);
-        if (spouse) spouse.pasanganId = id;
-    }
-
-    closeFormModal();
-    saveDataToDatabase(); // Langsung kirim ke Google Sheets
-}
-
 function deleteMember(id) {
-    if (!isAdmin) {
-        alert("Hanya Admin yang memiliki akses hapus.");
-        return;
-    }
-
+    if (!isAdmin) return alert("Hanya Admin yang memiliki akses hapus.");
     if (confirm("Hapus anggota keluarga ini?")) {
         members = members.filter(m => m.id !== id);
         members.forEach(m => {
@@ -399,13 +408,14 @@ function deleteMember(id) {
     }
 }
 
-// Fungsi Modal Pendukung
 function openFormModal(editId = null) {
     populateParentDropdowns(editId);
     const modal = document.getElementById('form-modal');
     const form = document.getElementById('member-form');
-    if (!modal || !form) return;
+    const statusElem = document.getElementById('upload-status');
+    if (statusElem) statusElem.className = "hidden";
 
+    if (!modal || !form) return;
     form.reset();
 
     if (editId) {
@@ -431,15 +441,13 @@ function openFormModal(editId = null) {
 }
 
 function closeFormModal() {
-    const modal = document.getElementById('form-modal');
-    if (modal) modal.classList.add('hidden');
+    document.getElementById('form-modal')?.classList.add('hidden');
 }
 
 function populateParentDropdowns(excludeId = null) {
     const ayahSel = document.getElementById('form-ayah');
     const ibuSel = document.getElementById('form-ibu');
     const pasanganSel = document.getElementById('form-pasangan');
-
     if (!ayahSel || !ibuSel || !pasanganSel) return;
 
     ayahSel.innerHTML = `<option value="">-- Tidak Ada --</option>`;
@@ -448,11 +456,8 @@ function populateParentDropdowns(excludeId = null) {
 
     members.forEach(m => {
         if (m.id === excludeId) return;
-        if (m.gender === 'L') {
-            ayahSel.innerHTML += `<option value="${m.id}">${m.nama} (Gen ${m.generasi})</option>`;
-        } else {
-            ibuSel.innerHTML += `<option value="${m.id}">${m.nama} (Gen ${m.generasi})</option>`;
-        }
+        if (m.gender === 'L') ayahSel.innerHTML += `<option value="${m.id}">${m.nama} (Gen ${m.generasi})</option>`;
+        else ibuSel.innerHTML += `<option value="${m.id}">${m.nama} (Gen ${m.generasi})</option>`;
         pasanganSel.innerHTML += `<option value="${m.id}">${m.nama} (Gen ${m.generasi})</option>`;
     });
 }
@@ -465,9 +470,7 @@ function updateFilterOptions() {
     const genList = [...new Set(members.map(m => m.generasi))].sort((a, b) => a - b);
 
     select.innerHTML = `<option value="ALL">Semua Generasi</option>`;
-    genList.forEach(g => {
-        select.innerHTML += `<option value="${g}">Generasi ${g}</option>`;
-    });
+    genList.forEach(g => select.innerHTML += `<option value="${g}">Generasi ${g}</option>`);
     select.value = currentVal;
 }
 
@@ -475,7 +478,6 @@ function setViewMode(mode) {
     viewMode = mode;
     const treeBtn = document.getElementById('view-tree-btn');
     const gridBtn = document.getElementById('view-grid-btn');
-
     if (treeBtn && gridBtn) {
         treeBtn.className = mode === 'tree' ? 'px-3 py-1.5 rounded-md font-medium bg-emerald-600 text-white' : 'px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200';
         gridBtn.className = mode === 'grid' ? 'px-3 py-1.5 rounded-md font-medium bg-emerald-600 text-white' : 'px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200';
@@ -486,15 +488,10 @@ function setViewMode(mode) {
 function toggleAdminRole() {
     if (isAdmin) {
         isAdmin = false;
-        alert("Kembali ke Mode Anggota biasa.");
     } else {
         const pin = prompt("Masukkan PIN Admin (Default: 1234):");
-        if (pin === ADMIN_PIN) {
-            isAdmin = true;
-            alert("Mode Admin Aktif.");
-        } else if (pin !== null) {
-            alert("PIN Salah!");
-        }
+        if (pin === ADMIN_PIN) isAdmin = true;
+        else if (pin !== null) alert("PIN Salah!");
     }
     const btnText = document.getElementById('admin-text');
     const btn = document.getElementById('btn-admin');
@@ -542,11 +539,9 @@ function openDetailModal(id) {
         `;
     }
 
-    const detailModal = document.getElementById('detail-modal');
-    if (detailModal) detailModal.classList.remove('hidden');
+    document.getElementById('detail-modal')?.classList.remove('hidden');
 }
 
 function closeDetailModal() {
-    const modal = document.getElementById('detail-modal');
-    if (modal) modal.classList.add('hidden');
+    document.getElementById('detail-modal')?.classList.add('hidden');
 }
