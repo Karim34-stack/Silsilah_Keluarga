@@ -1,5 +1,5 @@
 // ============================================================
-// KONFIGURASI DATABASE GOOGLE SHEETS & DRIVE
+// KONFIGURASI DATABASE & STATE APLIKASI
 // ============================================================
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLSVQPcbETmXAna8tSs7uIweqzM1HJpbn9lExO7kyPa_Hcr6e0Pyw8CtBCSMve9a3_Xg/exec";
 
@@ -10,12 +10,11 @@ let renderedMemberIds = new Set();
 const ADMIN_PIN = "1234";
 
 const defaultMembers = [
-    { id: "m1", nama: "Kaidi", gender: "L", generasi: 1, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m2", foto: "", catatan: "Kakek" },
-    { id: "m2", nama: "Tukirah", gender: "P", generasi: 1, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m1", foto: "", catatan: "Nenek" },
-    { id: "m3", nama: "Budi Santoso", gender: "L", generasi: 2, status: "Hidup", ayahId: "m1", ibuId: "m2", pasanganId: "m4", foto: "", catatan: "Anak Pertama" },
-    { id: "m4", nama: "Wiwit", gender: "P", generasi: 2, status: "Hidup", ayahId: "", ibuId: "", pasanganId: "m3", foto: "", catatan: "Istri Budi" },
-    { id: "m5", nama: "Zeni DS", gender: "P", generasi: 2, status: "Hidup", ayahId: "m1", ibuId: "m2", pasanganId: "", foto: "", catatan: "Anak Kedua" },
-    { id: "m6", nama: "Kana Zs", gender: "P", generasi: 3, status: "Hidup", ayahId: "m3", ibuId: "m4", pasanganId: "", foto: "", catatan: "Cucu" }
+    { id: "m1", nama: "Kyai Totaruno", gender: "L", generasi: 1, status: "Wafat", ayahId: "", ibuId: "", pasanganId: "", foto: "", catatan: "Leluhur Utama" },
+    { id: "m2", nama: "Karsodikromo", gender: "L", generasi: 2, status: "Wafat", ayahId: "m1", ibuId: "", pasanganId: "m3", foto: "", catatan: "" },
+    { id: "m3", nama: "Siah", gender: "P", generasi: 2, status: "Wafat", ayahId: "", ibuId: "", pasanganId: "m2", foto: "", catatan: "" },
+    { id: "m4", nama: "Pramudjo Suwarno", gender: "L", generasi: 3, status: "Wafat", ayahId: "m2", ibuId: "m3", pasanganId: "", foto: "", catatan: "" },
+    { id: "m5", nama: "Mar Jiyem", gender: "L", generasi: 3, status: "Hidup", ayahId: "m2", ibuId: "m3", pasanganId: "", foto: "", catatan: "" }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -35,7 +34,7 @@ function updateDbBadge(status, text) {
 }
 
 // ------------------------------------------------------------
-// 1. KONEKSI GOOGLE SHEETS DATABASE
+// 1. KONEKSI GOOGLE SHEETS
 // ------------------------------------------------------------
 async function fetchDataFromDatabase() {
     updateDbBadge('loading', 'Menghubungkan Database...');
@@ -97,10 +96,7 @@ async function saveDataToDatabase() {
 }
 
 // ------------------------------------------------------------
-// 2. UNGGAH FOTO KE GOOGLE DRIVE
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// UNGGAH FOTO PROFIL (KOMPRESI LOKAL & DIRECT LINK)
+// 2. PEMPROSESAN & UPLOAD FOTO PROFIL
 // ------------------------------------------------------------
 async function handleFileSelect(event) {
     const file = event.target.files[0];
@@ -113,29 +109,23 @@ async function handleFileSelect(event) {
     }
 
     try {
-        // Kompresi Gambar di sisi Client (Browser) agar ukurannya kecil (Maksimal 300x300 px)
         const compressedBase64 = await resizeAndCompressImage(file, 300, 300, 0.7);
-
-        // Langsung masukkan data gambar yang sudah terkompresi ke input text
         const fotoInput = document.getElementById('form-foto');
-        if (fotoInput) {
-            fotoInput.value = compressedBase64;
-        }
+        if (fotoInput) fotoInput.value = compressedBase64;
 
         if (statusElem) {
-            statusElem.innerText = "✓ Foto berhasil diproses dan siap disimpan!";
+            statusElem.innerText = "✓ Foto berhasil diproses!";
             statusElem.className = "text-[10px] text-emerald-400 mt-1 block font-semibold";
         }
     } catch (err) {
         console.error("Gagal memproses gambar:", err);
         if (statusElem) {
-            statusElem.innerText = "Gagal memproses foto. Coba pilih file gambar lain.";
+            statusElem.innerText = "Gagal memproses foto. Coba file lain.";
             statusElem.className = "text-[10px] text-rose-400 mt-1 block";
         }
     }
 }
 
-// Fungsi Pembantu: Mengompresi & Memperkecil Ukuran Gambar di Browser
 function resizeAndCompressImage(file, maxWidth, maxHeight, quality) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -165,27 +155,55 @@ function resizeAndCompressImage(file, maxWidth, maxHeight, quality) {
 
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-
-                // Mengembalikan format Data URL Base64 yang sudah diperkecil (~20KB - 50KB)
-                const compressedUrl = canvas.toDataURL('image/jpeg', quality);
-                resolve(compressedUrl);
+                resolve(canvas.toDataURL('image/jpeg', quality));
             };
-            img.onerror = function (error) {
-                reject(error);
-            };
+            img.onerror = reject;
         };
-        reader.onerror = function (error) {
-            reject(error);
-        };
+        reader.onerror = reject;
     });
 }
 
 // ------------------------------------------------------------
-// 3. LOGIKA RENDER POHON & FILTER AKAR KELUARGA
+// 3. RENDER POHON & FILTER AKAR KELUARGA
 // ------------------------------------------------------------
-// ------------------------------------------------------------
-// LOGIKA RENDER & FILTERING
-// ------------------------------------------------------------
+function updateFilterOptions() {
+    const genSelect = document.getElementById('filter-gen');
+    if (genSelect) {
+        const currentVal = genSelect.value;
+        const genList = [...new Set(members.map(m => parseInt(m.generasi) || 1))].sort((a, b) => a - b);
+        genSelect.innerHTML = `<option value="ALL">Semua Generasi</option>`;
+        genList.forEach(g => genSelect.innerHTML += `<option value="${g}">Generasi ${g}</option>`);
+        genSelect.value = currentVal;
+    }
+
+    const rootSelect = document.getElementById('filter-root');
+    if (rootSelect) {
+        const currentVal = rootSelect.value;
+        
+        let rootMembers = members.filter(m => {
+            const hasNoAyah = !m.ayahId || m.ayahId.toString().trim() === "" || m.ayahId === "undefined";
+            const hasNoIbu = !m.ibuId || m.ibuId.toString().trim() === "" || m.ibuId === "undefined";
+            return hasNoAyah && hasNoIbu;
+        });
+
+        if (rootMembers.length === 0) {
+            const minGen = Math.min(...members.map(m => parseInt(m.generasi) || 1));
+            rootMembers = members.filter(m => (parseInt(m.generasi) || 1) === minGen);
+        }
+
+        rootSelect.innerHTML = `<option value="ALL">Semua Akar Keluarga</option>`;
+        rootMembers.forEach(r => {
+            rootSelect.innerHTML += `<option value="${r.id}">${r.nama} (Gen ${r.generasi || 1})</option>`;
+        });
+
+        if ([...rootSelect.options].some(opt => opt.value === currentVal)) {
+            rootSelect.value = currentVal;
+        } else {
+            rootSelect.value = "ALL";
+        }
+    }
+}
+
 function renderApp() {
     updateFilterOptions();
     const container = document.getElementById('tree-container');
@@ -199,12 +217,10 @@ function renderApp() {
 
     let filtered = members.filter(m => (m.nama || '').toLowerCase().includes(searchQuery));
 
-    // Filter berdasarkan Generasi
     if (selectedGen !== 'ALL') {
         filtered = filtered.filter(m => (parseInt(m.generasi) || 1) === parseInt(selectedGen));
     }
 
-    // Filter berdasarkan Akar Keluarga (Leluhur terpilih + seluruh keturunannya)
     if (selectedRoot !== 'ALL') {
         const descendantIds = getAllDescendantsAndSpouses(selectedRoot);
         filtered = filtered.filter(m => descendantIds.has(m.id));
@@ -222,7 +238,6 @@ function renderApp() {
     }
 }
 
-// Fungsi rekursif untuk mengambil semua keturunan & pasangan dari satu akar
 function getAllDescendantsAndSpouses(rootId) {
     const result = new Set();
     const queue = [rootId];
@@ -233,12 +248,10 @@ function getAllDescendantsAndSpouses(rootId) {
             result.add(currentId);
             const currentObj = members.find(m => m.id === currentId);
             
-            // Tambahkan pasangan
             if (currentObj && currentObj.pasanganId) {
                 result.add(currentObj.pasanganId);
             }
 
-            // Tambahkan anak-anak
             const children = members.filter(m => m.ayahId === currentId || m.ibuId === currentId);
             children.forEach(c => queue.push(c.id));
         }
@@ -248,17 +261,21 @@ function getAllDescendantsAndSpouses(rootId) {
 
 function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     renderedMemberIds = new Set();
-
     let rootCandidates = [];
 
     if (selectedRoot !== 'ALL') {
         const rootObj = members.find(m => m.id === selectedRoot);
         if (rootObj) rootCandidates = [rootObj];
     } else {
-        rootCandidates = filteredMembers.filter(m => !m.ayahId && !m.ibuId);
+        rootCandidates = filteredMembers.filter(m => {
+            const hasNoAyah = !m.ayahId || m.ayahId.toString().trim() === "";
+            const hasNoIbu = !m.ibuId || m.ibuId.toString().trim() === "";
+            return hasNoAyah && hasNoIbu;
+        });
+
         if (rootCandidates.length === 0 && filteredMembers.length > 0) {
-            const minGen = Math.min(...filteredMembers.map(m => m.generasi));
-            rootCandidates = filteredMembers.filter(m => m.generasi === minGen);
+            const minGen = Math.min(...filteredMembers.map(m => parseInt(m.generasi) || 1));
+            rootCandidates = filteredMembers.filter(m => (parseInt(m.generasi) || 1) === minGen);
         }
     }
 
@@ -277,7 +294,6 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
 
 function buildTreeNode(member, allMembers) {
     if (renderedMemberIds.has(member.id)) return null;
-
     renderedMemberIds.add(member.id);
 
     const nodeContainer = document.createElement('div');
@@ -413,60 +429,33 @@ function createMemberCard(m) {
 }
 
 // ------------------------------------------------------------
-// 4. PEMBARUAN OPSI FILTER DROPDOWN
+// 4. EKSPORED EXPORT PDF
 // ------------------------------------------------------------
-// ------------------------------------------------------------
-// PEMBARUAN OPSI FILTER DROPDOWN (AKAR KELUARGA & GENERASI)
-// ------------------------------------------------------------
-function updateFilterOptions() {
-    // 1. Update Filter Generasi
-    const genSelect = document.getElementById('filter-gen');
-    if (genSelect) {
-        const currentVal = genSelect.value;
-        const genList = [...new Set(members.map(m => parseInt(m.generasi) || 1))].sort((a, b) => a - b);
-        
-        genSelect.innerHTML = `<option value="ALL">Semua Generasi</option>`;
-        genList.forEach(g => {
-            genSelect.innerHTML += `<option value="${g}">Generasi ${g}</option>`;
-        });
-        genSelect.value = currentVal;
-    }
+function exportToPDF() {
+    const element = document.getElementById('tree-container');
+    if (!element) return;
 
-    // 2. Update Filter Akar Keluarga (Paling Atas / Tanpa Orang Tua / Generasi Teratas)
-    const rootSelect = document.getElementById('filter-root');
-    if (rootSelect) {
-        const currentVal = rootSelect.value;
-        
-        // Deteksi anggota yang tidak memiliki ayah DAN ibu (Leluhur/Akar)
-        let rootMembers = members.filter(m => {
-            const hasNoAyah = !m.ayahId || m.ayahId.toString().trim() === "" || m.ayahId === "undefined";
-            const hasNoIbu = !m.ibuId || m.ibuId.toString().trim() === "" || m.ibuId === "undefined";
-            return hasNoAyah && hasNoIbu;
-        });
+    const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     `Silsilah_Keluarga_${Date.now()}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a3', orientation: 'landscape' }
+    };
 
-        // Jika tidak ada yang cocok, ambil semua anggota Generasi 1 sebagai cadangan
-        if (rootMembers.length === 0) {
-            const minGen = Math.min(...members.map(m => parseInt(m.generasi) || 1));
-            rootMembers = members.filter(m => (parseInt(m.generasi) || 1) === minGen);
-        }
+    updateDbBadge('loading', 'Membuat File PDF...');
 
-        rootSelect.innerHTML = `<option value="ALL">Semua Akar Keluarga</option>`;
-        
-        rootMembers.forEach(r => {
-            rootSelect.innerHTML += `<option value="${r.id}">${r.nama} (Gen ${r.generasi || 1})</option>`;
-        });
-
-        // Jaga agar nilai opsi yang terpilih tidak ter-reset
-        if ([...rootSelect.options].some(opt => opt.value === currentVal)) {
-            rootSelect.value = currentVal;
-        } else {
-            rootSelect.value = "ALL";
-        }
-    }
+    html2pdf().set(opt).from(element).save().then(() => {
+        updateDbBadge('connected', 'Google Sheets Terhubung');
+    }).catch(err => {
+        console.error('PDF Export Error:', err);
+        alert('Gagal mengekspor PDF.');
+        updateDbBadge('connected', 'Google Sheets Terhubung');
+    });
 }
 
 // ------------------------------------------------------------
-// 5. PENANGANAN FORM & MODAL
+// 5. EVENT FORM & MODAL HANDLERS
 // ------------------------------------------------------------
 function handleFormSubmit(e) {
     e.preventDefault();
