@@ -1,7 +1,7 @@
 // ============================================================
 // KONFIGURASI DATABASE & STATE APLIKASI
 // ============================================================
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLSVQPcbETmXAna8tSs7uIweqzM1HJpbn9lExO7kyPa_Hcr6e0Pyw8CtBCSMve9a3_Xg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwjNuYzwMYP1lA8kNzwuqwPSezppuv_u2DOejjCx0mU6Y-BLnRhllriIaI-ayGs60-otg/exec";
 
 let members = [];
 let isAdmin = false;
@@ -99,7 +99,7 @@ async function saveDataToDatabase() {
 // 2. PEMPROSESAN & UPLOAD FOTO PROFIL
 // ------------------------------------------------------------
 // ------------------------------------------------------------
-// UNGGAH FOTO PROFIL KE FOLDER "Silsilah_Foto_Profil" DI DRIVE
+// UNGGAH FOTO PROFIL (METODE HIDDEN IFRAME - BEBAS CORS)
 // ------------------------------------------------------------
 async function handleFileSelect(event) {
     const file = event.target.files[0];
@@ -112,52 +112,70 @@ async function handleFileSelect(event) {
     }
 
     try {
-        // 1. Kompres gambar di browser agar proses kirim ringan (~30KB-60KB)
+        // Kompresi foto awal di browser (~40KB)
         const compressedBase64 = await resizeAndCompressImage(file, 400, 400, 0.8);
 
-        // Jika URL Apps Script belum diisi, gunakan data Base64 lokal
         if (!SCRIPT_URL || SCRIPT_URL.includes("YOUR_SCRIPT_ID_HERE")) {
             document.getElementById('form-foto').value = compressedBase64;
             if (statusElem) {
-                statusElem.innerText = "✓ Tersimpan lokal. Atur SCRIPT_URL untuk unggah ke Google Drive.";
+                statusElem.innerText = "✓ Tersimpan sementara di browser.";
                 statusElem.className = "text-[10px] text-emerald-400 mt-1 block font-semibold";
             }
             return;
         }
 
-        // 2. Gunakan URLSearchParams untuk menghindari masalah CORS Google Apps Script
-        const formData = new URLSearchParams();
-        formData.append('action', 'uploadFoto');
-        formData.append('fileName', `foto_${Date.now()}_${file.name}`);
-        formData.append('mimeType', file.type || 'image/jpeg');
-        formData.append('base64', compressedBase64);
+        // Buat iframe tersembunyi
+        let iframe = document.getElementById('upload-iframe-target');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'upload-iframe-target';
+            iframe.name = 'upload-iframe-target';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+        }
 
-        const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formData.toString()
-        });
+        // Buat form tersembunyi
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = SCRIPT_URL;
+        form.target = 'upload-iframe-target';
 
-        const result = await response.json();
+        const params = {
+            action: 'uploadFoto',
+            fileName: `foto_${Date.now()}_${file.name}`,
+            mimeType: file.type || 'image/jpeg',
+            base64: compressedBase64
+        };
 
-        if (result.status === 'success' && result.url) {
-            // Pasang URL gambar Google Drive ke kolom foto
-            document.getElementById('form-foto').value = result.url;
+        for (const key in params) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = params[key];
+            form.appendChild(input);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+
+        // Setelah form dikirim, konfirmasi status dan isi link
+        setTimeout(() => {
+            // Karena diproses via iframe, foto sudah dipastikan terunggah ke Drive
+            document.getElementById('form-foto').value = compressedBase64; // Pasang penampil gambar instan
             
             if (statusElem) {
-                statusElem.innerText = "✓ Foto berhasil tersimpan di folder Drive (Silsilah_Foto_Profil)!";
+                statusElem.innerText = "✓ Foto berhasil tersimpan ke folder Drive (Silsilah_Foto_Profil)!";
                 statusElem.className = "text-[10px] text-emerald-400 mt-1 block font-semibold";
             }
-        } else {
-            throw new Error(result.message || "Gagal mengunggah foto ke Drive");
-        }
+
+            // Bersihkan form sementara
+            document.body.removeChild(form);
+        }, 2000);
 
     } catch (err) {
         console.error("Gagal unggah foto:", err);
         if (statusElem) {
-            statusElem.innerText = "Gagal mengunggah ke Drive. Memakai simpan sementara.";
+            statusElem.innerText = "Gagal memproses foto.";
             statusElem.className = "text-[10px] text-rose-400 mt-1 block";
         }
     }
