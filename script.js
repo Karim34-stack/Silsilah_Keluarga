@@ -255,41 +255,72 @@ function updateFilterOptions() {
     }
 }
 
+// Helper Function: Mengambil seluruh ID keturunan (anak, cucu, cicit, dst)
+function getAllDescendantIds(memberIds) {
+    let descendantIds = new Set(memberIds);
+    let queue = [...memberIds];
+
+    while (queue.length > 0) {
+        const currentId = queue.shift();
+
+        // Cari semua anak yang memiliki Ayah atau Ibu bernilai currentId
+        const children = members.filter(m => m.ayahId === currentId || m.ibuId === currentId);
+
+        children.forEach(child => {
+            if (!descendantIds.has(child.id)) {
+                descendantIds.add(child.id);
+                // Tambahkan pasangan dari anak jika ada (agar pohon tetap lengkap)
+                if (child.pasanganId) {
+                    descendantIds.add(child.pasanganId);
+                }
+                queue.push(child.id);
+            }
+        });
+    }
+
+    return descendantIds;
+}
+
+// Update Fungsi renderApp
 function renderApp() {
-    updateFilterOptions();
     const container = document.getElementById('tree-container');
     if (!container) return;
 
-    container.innerHTML = '';
-
-    const searchQuery = (document.getElementById('search-input')?.value || '').toLowerCase();
-    const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
+    const searchKeyword = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
     const selectedRoot = document.getElementById('filter-root')?.value || 'ALL';
+    const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
 
-    let filtered = members.filter(m => (m.nama || '').toLowerCase().includes(searchQuery));
+    let filteredMembers = [];
 
-    if (selectedGen !== 'ALL') {
-        filtered = filtered.filter(m => (parseInt(m.generasi) || 1) === parseInt(selectedGen));
-    }
+    if (searchKeyword) {
+        // 1. Cari anggota yang namanya cocok dengan keyword pencarian
+        const matchedMembers = members.filter(m => m.nama.toLowerCase().includes(searchKeyword));
+        const matchedIds = matchedMembers.map(m => m.id);
 
-    if (selectedRoot !== 'ALL') {
-        const descendantIds = getAllDescendantsAndSpouses(selectedRoot);
-        filtered = filtered.filter(m => descendantIds.has(m.id));
-    }
+        // 2. Kumpulkan seluruh ID anak, cucu, dan keturunan berikutnya
+        const allowedIds = getAllDescendantIds(matchedIds);
 
-    const countElem = document.getElementById('member-count');
-    if (countElem) countElem.innerText = filtered.length;
+        // 3. Masukkan juga pasangan dari anggota yang ditemukan
+        matchedMembers.forEach(m => {
+            if (m.pasanganId) allowedIds.add(m.pasanganId);
+        });
 
-    if (filtered.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500 font-medium">Tidak ada data anggota ditemukan.</div>`;
-        return;
-    }
-
-    if (viewMode === 'grid') {
-        renderGridView(container, filtered);
+        // Filter data utama berdasarkan ID yang diizinkan
+        filteredMembers = members.filter(m => allowedIds.has(m.id));
     } else {
-        renderTreeView(container, filtered, selectedRoot);
+        filteredMembers = [...members];
     }
+
+    // Filter tambahan berdasarkan Generasi jika dipilih
+    if (selectedGen !== 'ALL') {
+        filteredMembers = filteredMembers.filter(m => String(m.generasi) === String(selectedGen));
+    }
+
+    // Update total counter anggota yang tampil
+    const totalCountEl = document.getElementById('total-count');
+    if (totalCountEl) totalCountEl.innerText = filteredMembers.length;
+
+    renderTreeView(container, filteredMembers, selectedRoot, searchKeyword);
 }
 
 function getAllDescendantsAndSpouses(rootId) {
