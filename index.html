@@ -29,12 +29,13 @@
             <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-emerald-400 border border-slate-700/60">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Google Sheets Terhubung
             </span>
-            <button onclick="loadDataFromGoogleSheets()" class="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700/60" title="Refresh Data">
+            <button onclick="loadDataFromGoogleSheets()" class="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700/60 cursor-pointer" title="Refresh Data">
                 <i class="fa-solid fa-rotate"></i>
             </button>
-            <!-- Tombol Switch Mode Admin -->
-            <button id="btn-admin" onclick="toggleAdminMode()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center gap-2 font-medium transition">
-                <i id="icon-admin" class="fa-solid fa-lock text-xs"></i> <span id="text-admin">Mode Admin</span>
+            <!-- Tombol Toggle Mode Admin -->
+            <button id="btn-admin" onclick="toggleAdminMode()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center gap-2 font-medium transition cursor-pointer">
+                <i id="icon-admin" class="fa-solid fa-lock text-xs"></i> 
+                <span id="text-admin">Mode Admin</span>
             </button>
         </div>
     </header>
@@ -82,7 +83,7 @@
                     </button>
                 </div>
 
-                <button onclick="openModal()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-2 transition shadow-lg shadow-emerald-900/20">
+                <button onclick="openModal()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-2 transition shadow-lg shadow-emerald-900/20 cursor-pointer">
                     <i class="fa-solid fa-user-plus"></i> Tambah Anggota
                 </button>
             </div>
@@ -94,19 +95,21 @@
         </div>
     </main>
 
-    <!-- Modal Form Tambah Anggota / Kerabat -->
+    <!-- Modal Form Tambah / Edit Anggota -->
     <div id="modal-tambah" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative text-slate-100">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
                 <h3 class="font-bold text-base flex items-center gap-2">
                     <i class="fa-solid fa-user-plus text-emerald-400"></i> <span id="modal-title">Tambah Anggota Keluarga</span>
                 </h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition">
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition cursor-pointer">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
             <form id="form-add-member" onsubmit="submitMember(event)" class="space-y-3">
+                <input type="hidden" id="edit-member-id" value="">
+
                 <div>
                     <label class="block text-xs font-medium text-slate-400 mb-1">Nama Lengkap</label>
                     <input type="text" id="add-nama" required placeholder="Contoh: Budi Santoso" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
@@ -158,11 +161,11 @@
                 </div>
 
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition cursor-pointer">
                         Batal
                     </button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium transition shadow-lg shadow-emerald-900/20">
-                        Simpan Anggota
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium transition shadow-lg shadow-emerald-900/20 cursor-pointer">
+                        Simpan Data
                     </button>
                 </div>
             </form>
