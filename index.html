@@ -26,13 +26,17 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-emerald-400 border border-slate-700/60">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Google Sheets Terhubung
+            <!-- Badge Status Koneksi Dinamis -->
+            <span id="db-status-badge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-amber-400 border border-slate-700/60">
+                <span id="db-status-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> 
+                <span id="db-status-text">Menghubungkan...</span>
             </span>
+
             <button onclick="loadDataFromGoogleSheets()" class="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700/60 cursor-pointer" title="Refresh Data">
                 <i class="fa-solid fa-rotate"></i>
             </button>
-            <!-- Tombol Toggle Mode Admin -->
+
+            <!-- Toggle Mode Admin -->
             <button id="btn-admin" onclick="toggleAdminMode()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center gap-2 font-medium transition cursor-pointer">
                 <i id="icon-admin" class="fa-solid fa-lock text-xs"></i> 
                 <span id="text-admin">Mode Admin</span>
@@ -90,8 +94,8 @@
         </div>
 
         <!-- Canvas Pohon Silsilah -->
-        <div id="tree-container" class="bg-slate-900/40 rounded-3xl border border-slate-800/80 min-h-[600px] flex items-center justify-center">
-            <!-- Konten Pohon Dirender Oleh script.js -->
+        <div id="tree-container" class="bg-slate-900/40 rounded-3xl border border-slate-800/80 min-h-[600px] flex items-center justify-center overflow-auto">
+            <!-- Konten Pohon Dirender oleh script.js -->
         </div>
     </main>
 
