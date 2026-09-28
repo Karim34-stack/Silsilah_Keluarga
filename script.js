@@ -268,45 +268,34 @@ function resizeAndCompressImage(file, maxWidth, maxHeight, quality) {
 // 3. RENDER POHON & DEDUP AKAR KELUARGA
 // ------------------------------------------------------------
 function updateFilterOptions() {
-  const genSelect = document.getElementById("filter-gen");
-  if (genSelect) {
-    const currentVal = genSelect.value;
-    const genList = [
-      ...new Set(members.map((m) => parseInt(m.generasi) || 1)),
-    ].sort((a, b) => a - b);
-    genSelect.innerHTML = `<option value="ALL">Semua Generasi</option>`;
-    genList.forEach(
-      (g) =>
-        (genSelect.innerHTML += `<option value="${g}">Generasi ${g}</option>`),
-    );
-    genSelect.value = currentVal;
-  }
-
-  const rootSelect = document.getElementById("filter-root");
-  if (rootSelect) {
-    const currentVal = rootSelect.value;
-    let rootMembers = members.filter(
-      (m) =>
-        (!m.ayahId || m.ayahId.trim() === "") &&
-        (!m.ibuId || m.ibuId.trim() === ""),
-    );
-    if (rootMembers.length === 0) {
-      const minGen = Math.min(...members.map((m) => parseInt(m.generasi) || 1));
-      rootMembers = members.filter(
-        (m) => (parseInt(m.generasi) || 1) === minGen,
-      );
+    // 1. Dropdown Generasi
+    const genSelect = document.getElementById('filter-gen');
+    if (genSelect) {
+        const currentVal = genSelect.value;
+        const genList = [...new Set(members.map(m => parseInt(m.generasi) || 1))].sort((a, b) => a - b);
+        genSelect.innerHTML = `<option value="ALL">Semua Generasi</option>`;
+        genList.forEach(g => genSelect.innerHTML += `<option value="${g}">Generasi ${g}</option>`);
+        genSelect.value = currentVal;
     }
 
-    rootSelect.innerHTML = `<option value="ALL">Semua Akar Keluarga</option>`;
-    rootMembers.forEach((r) => {
-      rootSelect.innerHTML += `<option value="${r.id}">${r.nama} (Gen ${r.generasi || 1})</option>`;
-    });
-    rootSelect.value = [...rootSelect.options].some(
-      (opt) => opt.value === currentVal,
-    )
-      ? currentVal
-      : "ALL";
-  }
+    // 2. Dropdown Pangkal / Akar Silsilah (Pencarian Pucuk Pohon)
+    const rootSelect = document.getElementById('filter-root');
+    if (rootSelect) {
+        const currentVal = rootSelect.value;
+        
+        // Urutkan anggota berdasarkan generasi lalu nama
+        const sortedMembers = [...members].sort((a, b) => {
+            if (a.generasi !== b.generasi) return a.generasi - b.generasi;
+            return a.nama.localeCompare(b.nama);
+        });
+
+        rootSelect.innerHTML = `<option value="ALL">Semua Akar (Pohon Utama)</option>`;
+        sortedMembers.forEach(m => {
+            rootSelect.innerHTML += `<option value="${m.id}">Pangkal: ${m.nama} (Gen ${m.generasi || 1})</option>`;
+        });
+
+        rootSelect.value = [...rootSelect.options].some(opt => opt.value === currentVal) ? currentVal : "ALL";
+    }
 }
 
 function renderApp() {
@@ -378,95 +367,77 @@ function getAllDescendantsAndSpouses(rootId) {
 // ------------------------------------------------------------
 // PERBAIKAN TOTAL: RENDER SELURUH ANGGOTA SAAT FILTER GENERASI
 // ------------------------------------------------------------
-function renderTreeView(container, filteredMembers, selectedRoot = "ALL") {
-  renderedMemberIds = new Set();
-  const selectedGen = document.getElementById("filter-gen")?.value || "ALL";
+function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
+    renderedMemberIds = new Set();
+    const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
 
-  const treeWrapper = document.createElement("div");
-  treeWrapper.className =
-    "inline-flex flex-col items-center gap-8 py-6 px-12 min-w-full w-max mx-auto";
+    const treeWrapper = document.createElement('div');
+    treeWrapper.className = 'inline-flex flex-col items-center gap-8 py-6 px-12 min-w-full w-max mx-auto';
 
-  // JIKA TERDAPAT FILTER GENERASI (misal: Generasi 3)
-  if (selectedGen !== "ALL") {
-    const flexContainer = document.createElement("div");
-    flexContainer.className =
-      "flex flex-wrap justify-center items-start gap-6 max-w-7xl";
+    // JIKA TERDAPAT FILTER GENERASI SPESIFIK (Tampilan Matriks Per Generasi)
+    if (selectedGen !== 'ALL') {
+        const flexContainer = document.createElement('div');
+        flexContainer.className = 'flex flex-wrap justify-center items-start gap-6 max-w-7xl';
 
-    // Ambil salinan antrean dari seluruh anggota yang lolos filter
-    let remaining = [...filteredMembers];
+        let remaining = [...filteredMembers];
 
-    while (remaining.length > 0) {
-      const member = remaining.shift();
+        while (remaining.length > 0) {
+            const member = remaining.shift();
+            if (renderedMemberIds.has(member.id)) continue;
 
-      // Skip jika sudah pernah digambar
-      if (renderedMemberIds.has(member.id)) continue;
+            renderedMemberIds.add(member.id);
 
-      renderedMemberIds.add(member.id);
+            const spouseId = member.pasanganId;
+            let spouse = spouseId ? members.find(m => m.id === spouseId) : null;
+            if (spouse) renderedMemberIds.add(spouse.id);
 
-      // Cari pasangan dari database utama maupun list filter
-      const spouseId = member.pasanganId;
-      let spouse = null;
-      if (spouseId) {
-        spouse = members.find((m) => m.id === spouseId);
-        if (spouse) renderedMemberIds.add(spouse.id);
-      }
+            const coupleBox = document.createElement('div');
+            coupleBox.className = 'flex items-center gap-2 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 shadow-lg';
+            
+            coupleBox.appendChild(createMemberCard(member));
 
-      // Buat kotak pasangan/kartu
-      const coupleBox = document.createElement("div");
-      coupleBox.className =
-        "flex items-center gap-2 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 shadow-lg";
+            if (spouse) {
+                const heartBadge = document.createElement('div');
+                heartBadge.className = 'text-pink-500 text-xs font-bold px-1';
+                heartBadge.innerHTML = '<i class="fa-solid fa-heart"></i>';
+                coupleBox.appendChild(heartBadge);
+                coupleBox.appendChild(createMemberCard(spouse));
+            }
 
-      coupleBox.appendChild(createMemberCard(member));
+            flexContainer.appendChild(coupleBox);
+        }
 
-      if (spouse) {
-        const heartBadge = document.createElement("div");
-        heartBadge.className = "text-pink-500 text-xs font-bold px-1";
-        heartBadge.innerHTML = '<i class="fa-solid fa-heart"></i>';
-        coupleBox.appendChild(heartBadge);
-        coupleBox.appendChild(createMemberCard(spouse));
-      }
+        treeWrapper.appendChild(flexContainer);
+    } 
+    // JIKA TAMPILAN POHON SILSILAH BERKETINGGIAN (TREE MODE)
+    else {
+        let rootCandidates = [];
 
-      flexContainer.appendChild(coupleBox);
+        // JIKA PANGKAL / AKAR PILIHAN DIPILIH
+        if (selectedRoot !== 'ALL') {
+            const rootObj = members.find(m => m.id === selectedRoot);
+            if (rootObj) rootCandidates = [rootObj];
+        } else {
+            // Tampilan Pohon Utama (Leluhur Teratas)
+            const minGen = Math.min(...filteredMembers.map(m => parseInt(m.generasi) || 1));
+            const topGenMembers = filteredMembers.filter(m => (parseInt(m.generasi) || 1) === minGen);
+            const primaryRoots = topGenMembers.filter(m => (!m.ayahId || m.ayahId.trim() === "") && (!m.ibuId || m.ibuId.trim() === ""));
+
+            if (primaryRoots.length > 0) rootCandidates = [primaryRoots[0]];
+            else if (topGenMembers.length > 0) rootCandidates = [topGenMembers[0]];
+        }
+
+        // Render struktur pohon bertingkat ke bawah
+        rootCandidates.forEach(root => {
+            if (!renderedMemberIds.has(root.id)) {
+                const treeNode = buildTreeNode(root, filteredMembers);
+                if (treeNode) treeWrapper.appendChild(treeNode);
+            }
+        });
     }
 
-    treeWrapper.appendChild(flexContainer);
-  }
-  // JIKA TAMPILAN NORMAL (SEMUA GENERASI / TAMPILAN POHON BERKETINGGIAN)
-  else {
-    let rootCandidates = [];
-
-    if (selectedRoot !== "ALL") {
-      const rootObj = members.find((m) => m.id === selectedRoot);
-      if (rootObj) rootCandidates = [rootObj];
-    } else {
-      const minGen = Math.min(
-        ...filteredMembers.map((m) => parseInt(m.generasi) || 1),
-      );
-      const topGenMembers = filteredMembers.filter(
-        (m) => (parseInt(m.generasi) || 1) === minGen,
-      );
-      const primaryRoots = topGenMembers.filter(
-        (m) =>
-          (!m.ayahId || m.ayahId.trim() === "") &&
-          (!m.ibuId || m.ibuId.trim() === ""),
-      );
-
-      if (primaryRoots.length > 0) rootCandidates = [primaryRoots[0]];
-      else if (topGenMembers.length > 0) rootCandidates = [topGenMembers[0]];
-    }
-
-    rootCandidates.forEach((root) => {
-      if (!renderedMemberIds.has(root.id)) {
-        const treeNode = buildTreeNode(root, filteredMembers);
-        if (treeNode) treeWrapper.appendChild(treeNode);
-      }
-    });
-  }
-
-  container.appendChild(treeWrapper);
-  setTimeout(() => {
-    container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
-  }, 100);
+    container.appendChild(treeWrapper);
+    setTimeout(() => { container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2; }, 100);
 }
 
 function buildTreeNode(member, allMembers) {
