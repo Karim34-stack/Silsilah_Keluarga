@@ -307,6 +307,9 @@ function getAllDescendantsAndSpouses(rootId) {
 // ------------------------------------------------------------
 // PERBAIKAN: RENDER POHON & FILTER GENERASI SESUAI
 // ------------------------------------------------------------
+// ------------------------------------------------------------
+// PERBAIKAN TOTAL: RENDER SELURUH ANGGOTA SAAT FILTER GENERASI
+// ------------------------------------------------------------
 function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     renderedMemberIds = new Set();
     const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
@@ -314,40 +317,50 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     const treeWrapper = document.createElement('div');
     treeWrapper.className = 'inline-flex flex-col items-center gap-8 py-6 px-12 min-w-full w-max mx-auto';
 
-    // JIKA ADA FILTER GENERASI TERTENTU (misal: Generasi 5)
+    // JIKA TERDAPAT FILTER GENERASI (misal: Generasi 3)
     if (selectedGen !== 'ALL') {
-        // Tampilkan seluruh anggota generasi tersebut beserta pasangannya dalam bentuk kartu horizontal
         const flexContainer = document.createElement('div');
-        flexContainer.className = 'flex flex-wrap justify-center gap-6 max-w-6xl';
+        flexContainer.className = 'flex flex-wrap justify-center items-start gap-6 max-w-7xl';
 
-        filteredMembers.forEach(member => {
-            if (!renderedMemberIds.has(member.id)) {
-                renderedMemberIds.add(member.id);
+        // Ambil salinan antrean dari seluruh anggota yang lolos filter
+        let remaining = [...filteredMembers];
 
-                const spouse = filteredMembers.find(m => m.id === member.pasanganId) || 
-                               members.find(m => m.id === member.pasanganId);
+        while (remaining.length > 0) {
+            const member = remaining.shift();
 
+            // Skip jika sudah pernah digambar
+            if (renderedMemberIds.has(member.id)) continue;
+
+            renderedMemberIds.add(member.id);
+
+            // Cari pasangan dari database utama maupun list filter
+            const spouseId = member.pasanganId;
+            let spouse = null;
+            if (spouseId) {
+                spouse = members.find(m => m.id === spouseId);
                 if (spouse) renderedMemberIds.add(spouse.id);
-
-                const coupleBox = document.createElement('div');
-                coupleBox.className = 'flex items-center gap-2 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 shadow-lg';
-                coupleBox.appendChild(createMemberCard(member));
-
-                if (spouse) {
-                    const heartBadge = document.createElement('div');
-                    heartBadge.className = 'text-pink-500 text-xs font-bold px-1';
-                    heartBadge.innerHTML = '<i class="fa-solid fa-heart"></i>';
-                    coupleBox.appendChild(heartBadge);
-                    coupleBox.appendChild(createMemberCard(spouse));
-                }
-
-                flexContainer.appendChild(coupleBox);
             }
-        });
+
+            // Buat kotak pasangan/kartu
+            const coupleBox = document.createElement('div');
+            coupleBox.className = 'flex items-center gap-2 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 shadow-lg';
+            
+            coupleBox.appendChild(createMemberCard(member));
+
+            if (spouse) {
+                const heartBadge = document.createElement('div');
+                heartBadge.className = 'text-pink-500 text-xs font-bold px-1';
+                heartBadge.innerHTML = '<i class="fa-solid fa-heart"></i>';
+                coupleBox.appendChild(heartBadge);
+                coupleBox.appendChild(createMemberCard(spouse));
+            }
+
+            flexContainer.appendChild(coupleBox);
+        }
 
         treeWrapper.appendChild(flexContainer);
     } 
-    // JIKA TAMPILAN NORMAL (SEMUA GENERASI)
+    // JIKA TAMPILAN NORMAL (SEMUA GENERASI / TAMPILAN POHON BERKETINGGIAN)
     else {
         let rootCandidates = [];
 
