@@ -36,7 +36,7 @@ function updateDbBadge(status, text) {
 // ------------------------------------------------------------
 // 1. KONEKSI GOOGLE SHEETS
 // ------------------------------------------------------------
-async function fetchDataFromDatabase() {
+async function () {
     updateDbBadge('loading', 'Menghubungkan Database...');
 
     if (!SCRIPT_URL || SCRIPT_URL.includes("YOUR_SCRIPT_ID_HERE")) {
@@ -66,8 +66,56 @@ async function fetchDataFromDatabase() {
     renderApp();
 }
 
+// Tambahkan / perbarui fungsi deduplikasi di script.js
+function removeDuplicateMembers(dataArray) {
+    const seen = new Set();
+    return dataArray.filter(item => {
+        if (!item.id || seen.has(item.id)) {
+            return false;
+        }
+        seen.add(item.id);
+        return true;
+    });
+}
+
+// Perbarui fungsi fetchDataFromDatabase()
+async function fetchDataFromDatabase() {
+    updateDbBadge('loading', 'Menghubungkan Database...');
+
+    if (!SCRIPT_URL || SCRIPT_URL.includes("YOUR_SCRIPT_ID_HERE")) {
+        loadLocalStorage();
+        return;
+    }
+
+    try {
+        const response = await fetch(SCRIPT_URL);
+        const data = await response.json();
+
+        if (Array.isArray(data) && data.length > 0) {
+            // Saring duplikat dari data yang diterima
+            const uniqueData = removeDuplicateMembers(data);
+            
+            members = uniqueData.map(item => ({
+                ...item,
+                generasi: parseInt(item.generasi) || 1
+            }));
+
+            localStorage.setItem('local_members', JSON.stringify(members));
+            updateDbBadge('connected', 'Google Sheets Terhubung');
+        } else {
+            loadLocalStorage();
+        }
+    } catch (err) {
+        console.error('Database Sync Error:', err);
+        loadLocalStorage();
+    }
+
+    renderApp();
+}
+
 function loadLocalStorage() {
-    members = JSON.parse(localStorage.getItem('local_members')) || defaultMembers;
+    const rawData = JSON.parse(localStorage.getItem('local_members')) || defaultMembers;
+    members = removeDuplicateMembers(rawData);
     updateDbBadge('offline', 'Mode Offline / Lokal');
     renderApp();
 }
