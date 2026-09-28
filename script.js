@@ -1,6 +1,9 @@
 // ============================================================
 // DATA SILSILAH LENGKAP (CONTOH 3 GENERASI)
 // ============================================================
+
+const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzBo9d7OP8HX4V8Ti6vD2z2xz62WBTYk17aj9zKATcymeOfr4axzsOgkns8l4sVP1sCog/exec";
+
 let members = [
     // GENERASI 1 (Akar Utama)
     { id: "1", nama: "KYAI TOTARUNO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 1, ayahId: "", ibuId: "", pasanganId: "2" },
@@ -42,17 +45,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Fungsi memuat data dari API / Google Sheets jika ada
 async function loadDataFromGoogleSheets() {
+    const container = document.getElementById('tree-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="text-center py-16 text-slate-400">
+                <i class="fa-solid fa-spinner fa-spin text-4xl mb-3 text-emerald-400"></i>
+                <p class="text-sm font-medium">Mengambil data dari Google Sheets...</p>
+            </div>`;
+    }
+
     try {
-        /*
-        const response = await fetch('URL_WEB_APP_GOOGLE_SHEETS_ANDA');
+        const response = await fetch(GOOGLE_SHEETS_URL);
         const data = await response.json();
+
+        // Validasi apakah data berbentuk Array dan tidak kosong
         if (Array.isArray(data) && data.length > 0) {
             members = data;
+        } else {
+            console.warn("Data kosong atau format JSON tidak sesuai:", data);
         }
-        */
     } catch (error) {
-        console.error("Gagal memuat data:", error);
+        console.error("Gagal mengambil data dari Google Sheets:", error);
     } finally {
+        // Pembaruan dropdown filter dan render pohon
         updateFilterOptions();
         renderApp();
     }
