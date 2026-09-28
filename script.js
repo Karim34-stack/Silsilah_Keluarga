@@ -493,29 +493,67 @@ function createMemberCard(m) {
 // ------------------------------------------------------------
 // 4. EKSPORED EXPORT PDF
 // ------------------------------------------------------------
-function exportToPDF() {
-    const element = document.getElementById('tree-container');
-    if (!element) return;
 
+// ------------------------------------------------------------
+// EKSPORED EXPORT PDF (UTUH TANPA TERPOTONG)
+// ------------------------------------------------------------
+async function exportToPDF() {
+    const container = document.getElementById('tree-container');
+    if (!container) return;
+
+    updateDbBadge('loading', 'Membuat File PDF...');
+
+    // 1. Simpan gaya asli sebelum ekspor
+    const originalStyle = {
+        overflow: container.style.overflow,
+        width: container.style.width,
+        maxWidth: container.style.maxWidth,
+        position: container.style.position
+    };
+
+    // 2. Ambil elemen pembungkus utama pohon
+    const treeWrapper = container.querySelector('div');
+    
+    // 3. Hitung lebar penuh yang dibutuhkan agar seluruh cabang pohon terekam
+    const fullWidth = treeWrapper ? Math.max(treeWrapper.scrollWidth, container.scrollWidth) + 80 : container.scrollWidth + 80;
+
+    // 4. Buka lebar kontainer secara paksa agar tidak ada elemen terpotong oleh scrollbar
+    container.style.overflow = 'visible';
+    container.style.width = `${fullWidth}px`;
+    container.style.maxWidth = 'none';
+
+    // Konfigurasi ekspor PDF (Otomatis menyesuaikan dengan ukuran pohon)
     const opt = {
         margin:       [10, 10, 10, 10],
         filename:     `Silsilah_Keluarga_${Date.now()}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'mm', format: 'a3', orientation: 'landscape' }
+        html2canvas:  { 
+            scale: 2, 
+            useCORS: true, 
+            logging: false,
+            windowWidth: fullWidth, // Mengambil tangkapan layar seluas total lebar pohon
+            scrollX: 0,
+            scrollY: 0
+        },
+        jsPDF:        { unit: 'mm', format: 'a2', orientation: 'landscape' } // Menggunakan format A2 Lanskap agar muat banyak cabang
     };
 
-    updateDbBadge('loading', 'Membuat File PDF...');
-
-    html2pdf().set(opt).from(element).save().then(() => {
-        updateDbBadge('connected', 'Google Sheets Terhubung');
-    }).catch(err => {
+    try {
+        // Jalankan proses pembuatan PDF
+        await html2pdf().set(opt).from(container).save();
+    } catch (err) {
         console.error('PDF Export Error:', err);
-        alert('Gagal mengekspor PDF.');
-        updateDbBadge('connected', 'Google Sheets Terhubung');
-    });
-}
+        alert('Gagal mengekspor PDF. Pastikan jaringan stabil.');
+    } finally {
+        // 5. Kembalikan tampilan halaman web ke kondisi semula
+        container.style.overflow = originalStyle.overflow;
+        container.style.width = originalStyle.width;
+        container.style.maxWidth = originalStyle.maxWidth;
+        container.style.position = originalStyle.position;
 
+        updateDbBadge('connected', 'Google Sheets Terhubung');
+    }
+}
 // ------------------------------------------------------------
 // 5. EVENT FORM & MODAL HANDLERS
 // ------------------------------------------------------------
