@@ -13,7 +13,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
 
-    <!-- Header App -->
+    <!-- Header Aplikasi -->
     <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3">
             <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
@@ -32,13 +32,14 @@
             <button onclick="loadDataFromGoogleSheets()" class="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700/60" title="Refresh Data">
                 <i class="fa-solid fa-rotate"></i>
             </button>
-            <button class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 flex items-center gap-2 font-medium">
-                <i class="fa-solid fa-lock text-xs"></i> Mode Admin
+            <!-- Tombol Switch Mode Admin -->
+            <button id="btn-admin" onclick="toggleAdminMode()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center gap-2 font-medium transition">
+                <i id="icon-admin" class="fa-solid fa-lock text-xs"></i> <span id="text-admin">Mode Admin</span>
             </button>
         </div>
     </header>
 
-    <!-- Toolbar Filter & Control Bar -->
+    <!-- Toolbar Filter & Kontrol Canvas -->
     <main class="p-6">
         <div class="bg-slate-900/80 p-3 rounded-2xl border border-slate-800 mb-6 flex flex-wrap items-center justify-between gap-3 shadow-xl">
             <!-- Filter Section -->
@@ -65,9 +66,9 @@
                 </span>
             </div>
 
-            <!-- Controls (Zoom, Switch View, PDF, Add Member) -->
+            <!-- Controls (Zoom & Actions) -->
             <div class="flex items-center gap-2">
-                <!-- KONTROL ZOOM -->
+                <!-- Kontrol Zoom -->
                 <div class="zoom-controls">
                     <button onclick="zoomTree(-0.1)" title="Perkecil (Zoom Out)" class="zoom-btn">
                         <i class="fa-solid fa-magnifying-glass-minus"></i>
@@ -81,20 +82,7 @@
                     </button>
                 </div>
 
-                <!-- Switch Mode Tampilan -->
-                <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-                    <button id="btn-pohon" class="px-3 py-1.5 rounded-lg bg-emerald-500 text-white font-medium flex items-center gap-1.5">
-                        <i class="fa-solid fa-diagram-project"></i> Pohon
-                    </button>
-                    <button id="btn-grid" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5">
-                        <i class="fa-solid fa-border-all"></i> Grid
-                    </button>
-                </div>
-
-                <button class="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-medium flex items-center gap-2 transition shadow-lg shadow-rose-900/20">
-                    <i class="fa-solid fa-file-pdf"></i> Export PDF
-                </button>
-                <button class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-2 transition shadow-lg shadow-emerald-900/20">
+                <button onclick="openModal()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-2 transition shadow-lg shadow-emerald-900/20">
                     <i class="fa-solid fa-user-plus"></i> Tambah Anggota
                 </button>
             </div>
@@ -102,86 +90,85 @@
 
         <!-- Canvas Pohon Silsilah -->
         <div id="tree-container" class="bg-slate-900/40 rounded-3xl border border-slate-800/80 min-h-[600px] flex items-center justify-center">
-            <!-- Konten Pohon Silsilah Dirender Otomatis oleh script.js -->
+            <!-- Konten Pohon Dirender Oleh script.js -->
         </div>
     </main>
-<!-- Modal Form Tambah Anggota -->
-<div id="modal-tambah" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-            <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
-                <i class="fa-solid fa-user-plus text-emerald-400"></i> Tambah Anggota Keluarga
-            </h3>
-            <button onclick="closeModal()" class="text-slate-400 hover:text-white transition">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
+
+    <!-- Modal Form Tambah Anggota / Kerabat -->
+    <div id="modal-tambah" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative text-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-emerald-400"></i> <span id="modal-title">Tambah Anggota Keluarga</span>
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="form-add-member" onsubmit="submitMember(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Nama Lengkap</label>
+                    <input type="text" id="add-nama" required placeholder="Contoh: Budi Santoso" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Jenis Kelamin</label>
+                        <select id="add-gender" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                            <option value="Laki-laki">Laki-laki</option>
+                            <option value="Perempuan">Perempuan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Status Hidup</label>
+                        <select id="add-status" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                            <option value="Hidup">Hidup</option>
+                            <option value="Wafat">Wafat</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Generasi Ke-</label>
+                        <input type="number" id="add-generasi" value="1" min="1" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Pasangan (Opsional)</label>
+                        <select id="add-pasangan" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                            <option value="">-- Tanpa Pasangan --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Ayah (Opsional)</label>
+                        <select id="add-ayah" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                            <option value="">-- Tanpa Ayah --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Ibu (Opsional)</label>
+                        <select id="add-ibu" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                            <option value="">-- Tanpa Ibu --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium transition shadow-lg shadow-emerald-900/20">
+                        Simpan Anggota
+                    </button>
+                </div>
+            </form>
         </div>
-
-        <form id="form-add-member" onsubmit="submitMember(event)" class="space-y-3">
-            <div>
-                <label class="block text-xs font-medium text-slate-400 mb-1">Nama Lengkap</label>
-                <input type="text" id="add-nama" required placeholder="Contoh: Budi Santoso" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Jenis Kelamin</label>
-                    <select id="add-gender" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                        <option value="Laki-laki">Laki-laki</option>
-                        <option value="Perempuan">Perempuan</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Status Hidup</label>
-                    <select id="add-status" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                        <option value="Hidup">Hidup</option>
-                        <option value="Wafat">Wafat</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Generasi Ke-</label>
-                    <input type="number" id="add-generasi" value="1" min="1" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Pasangan (Opsional)</label>
-                    <select id="add-pasangan" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                        <option value="">-- Tanpa Pasangan --</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Ayah (Opsional)</label>
-                    <select id="add-ayah" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                        <option value="">-- Tanpa Ayah --</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Ibu (Opsional)</label>
-                    <select id="add-ibu" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                        <option value="">-- Tanpa Ibu --</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition">
-                    Batal
-                </button>
-                <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium transition shadow-lg shadow-emerald-900/20">
-                    Simpan Anggota
-                </button>
-            </div>
-        </form>
     </div>
-</div>
-    <button onclick="openModal()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-2 transition shadow-lg shadow-emerald-900/20">
-    <i class="fa-solid fa-user-plus"></i> Tambah Anggota
-</button>
+
     <!-- Custom Script -->
     <script src="script.js"></script>
 </body>
