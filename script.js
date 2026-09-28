@@ -373,6 +373,10 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
 
     const treeWrapper = document.createElement('div');
     treeWrapper.className = 'inline-flex flex-col items-center gap-8 py-6 px-12 min-w-full w-max mx-auto';
+  
+  // Tambahkan kelas 'tree-wrapper-inner' agar sasaran zoom presisi
+    const treeWrapper = document.createElement('div');
+    treeWrapper.className = 'tree-wrapper-inner inline-flex flex-col items-center gap-8 py-6 px-12 min-w-full w-max mx-auto';
 
     // JIKA TERDAPAT FILTER GENERASI SPESIFIK (Tampilan Matriks Per Generasi)
     if (selectedGen !== 'ALL') {
@@ -437,7 +441,12 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     }
 
     container.appendChild(treeWrapper);
+    // Terapkan tingkat zoom saat ini setelah elemen pohon dibuat
+    applyZoom();
+  
     setTimeout(() => { container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2; }, 100);
+
+    
 }
 
 function buildTreeNode(member, allMembers) {
@@ -882,7 +891,41 @@ function openDetailModal(id) {
 
   document.getElementById("detail-modal")?.classList.remove("hidden");
 }
+// ============================================================
+// FITUR ZOOM POHON SILSILAH
+// ============================================================
+let currentZoom = 1.0;
+const MIN_ZOOM = 0.4; // Batas zoom terkecil (40%)
+const MAX_ZOOM = 2.0; // Batas zoom terbesar (200%)
 
+function zoomTree(delta) {
+    currentZoom = Math.min(Math.max(currentZoom + delta, MIN_ZOOM), MAX_ZOOM);
+    applyZoom();
+}
+
+function resetZoom() {
+    currentZoom = 1.0;
+    applyZoom();
+}
+
+function applyZoom() {
+    // Cari elemen pembungkus utama pohon silsilah
+    const container = document.getElementById('tree-container');
+    if (!container) return;
+
+    const treeWrapper = container.querySelector('.tree-wrapper-inner');
+    const zoomText = document.getElementById('zoom-level');
+
+    if (zoomText) {
+        zoomText.innerText = `${Math.round(currentZoom * 100)}%`;
+    }
+
+    if (treeWrapper) {
+        treeWrapper.style.transform = `scale(${currentZoom})`;
+        treeWrapper.style.transformOrigin = 'top center';
+        treeWrapper.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+    }
+}
 function closeDetailModal() {
   document.getElementById("detail-modal")?.classList.add("hidden");
 }
