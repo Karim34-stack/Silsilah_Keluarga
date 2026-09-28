@@ -1,18 +1,20 @@
-/* Custom Scrollbar & Container Styling */
+/* ============================================================
+   STYLING UTAMA & LAYOUT CONTAINER
+   ============================================================ */
 #tree-container {
     overflow: auto;
     position: relative;
     width: 100%;
-    min-height: 500px;
+    min-height: 600px;
 }
 
-/* Wrapper Utama Pohon Silsilah */
+/* Wrapper Utama Pohon Silsilah (Area Zoom Target) */
 .tree-wrapper-inner {
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     gap: 2rem;
-    padding: 1.5rem 3rem;
+    padding: 2rem 3rem;
     min-width: 100%;
     width: max-content;
     margin: 0 auto;
@@ -20,7 +22,7 @@
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Kotak Pasangan / Pasangan Suami Istri */
+/* Kotak Pasangan Suami Istri (Generasi View) */
 .couple-box {
     display: flex;
     align-items: center;
@@ -55,7 +57,9 @@
     background-color: #1e293b;
 }
 
-/* Garis Hubung Pohon (Opsional Jika Menggunakan Struktur Rekursif) */
+/* ============================================================
+   GARIS HUBUNG POHON SILSILAH (TREE NODES)
+   ============================================================ */
 .tree-node {
     display: flex;
     flex-direction: column;
@@ -65,7 +69,49 @@
 
 .tree-children {
     display: flex;
-    gap: 1.5rem;
+    gap: 2rem;
     position: relative;
     padding-top: 1.5rem;
+}
+
+/* Garis vertikal ke anak-anak */
+.tree-children::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 1.5rem;
+    background-color: #475569;
+    transform: translateX(-50%);
+}
+
+/* Garis horizontal penghubung saudara */
+.tree-node-child {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tree-node-child::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #475569;
+}
+
+.tree-node-child:first-child::before {
+    left: 50%;
+}
+
+.tree-node-child:last-child::before {
+    right: 50%;
+}
+
+.tree-node-child:only-child::before {
+    display: none;
 }
