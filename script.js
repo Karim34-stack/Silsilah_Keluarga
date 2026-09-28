@@ -304,31 +304,72 @@ function getAllDescendantsAndSpouses(rootId) {
     return result;
 }
 
+// ------------------------------------------------------------
+// PERBAIKAN: RENDER POHON & FILTER GENERASI SESUAI
+// ------------------------------------------------------------
 function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     renderedMemberIds = new Set();
-    let rootCandidates = [];
-
-    if (selectedRoot !== 'ALL') {
-        const rootObj = members.find(m => m.id === selectedRoot);
-        if (rootObj) rootCandidates = [rootObj];
-    } else {
-        const minGen = Math.min(...filteredMembers.map(m => parseInt(m.generasi) || 1));
-        const topGenMembers = filteredMembers.filter(m => (parseInt(m.generasi) || 1) === minGen);
-        const primaryRoots = topGenMembers.filter(m => (!m.ayahId || m.ayahId.trim() === "") && (!m.ibuId || m.ibuId.trim() === ""));
-
-        if (primaryRoots.length > 0) rootCandidates = [primaryRoots[0]];
-        else if (topGenMembers.length > 0) rootCandidates = [topGenMembers[0]];
-    }
+    const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
 
     const treeWrapper = document.createElement('div');
-    treeWrapper.className = 'inline-flex flex-col items-center gap-12 py-6 px-12 min-w-full w-max mx-auto';
+    treeWrapper.className = 'inline-flex flex-col items-center gap-8 py-6 px-12 min-w-full w-max mx-auto';
 
-    rootCandidates.forEach(root => {
-        if (!renderedMemberIds.has(root.id)) {
-            const treeNode = buildTreeNode(root, filteredMembers);
-            if (treeNode) treeWrapper.appendChild(treeNode);
+    // JIKA ADA FILTER GENERASI TERTENTU (misal: Generasi 5)
+    if (selectedGen !== 'ALL') {
+        // Tampilkan seluruh anggota generasi tersebut beserta pasangannya dalam bentuk kartu horizontal
+        const flexContainer = document.createElement('div');
+        flexContainer.className = 'flex flex-wrap justify-center gap-6 max-w-6xl';
+
+        filteredMembers.forEach(member => {
+            if (!renderedMemberIds.has(member.id)) {
+                renderedMemberIds.add(member.id);
+
+                const spouse = filteredMembers.find(m => m.id === member.pasanganId) || 
+                               members.find(m => m.id === member.pasanganId);
+
+                if (spouse) renderedMemberIds.add(spouse.id);
+
+                const coupleBox = document.createElement('div');
+                coupleBox.className = 'flex items-center gap-2 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 shadow-lg';
+                coupleBox.appendChild(createMemberCard(member));
+
+                if (spouse) {
+                    const heartBadge = document.createElement('div');
+                    heartBadge.className = 'text-pink-500 text-xs font-bold px-1';
+                    heartBadge.innerHTML = '<i class="fa-solid fa-heart"></i>';
+                    coupleBox.appendChild(heartBadge);
+                    coupleBox.appendChild(createMemberCard(spouse));
+                }
+
+                flexContainer.appendChild(coupleBox);
+            }
+        });
+
+        treeWrapper.appendChild(flexContainer);
+    } 
+    // JIKA TAMPILAN NORMAL (SEMUA GENERASI)
+    else {
+        let rootCandidates = [];
+
+        if (selectedRoot !== 'ALL') {
+            const rootObj = members.find(m => m.id === selectedRoot);
+            if (rootObj) rootCandidates = [rootObj];
+        } else {
+            const minGen = Math.min(...filteredMembers.map(m => parseInt(m.generasi) || 1));
+            const topGenMembers = filteredMembers.filter(m => (parseInt(m.generasi) || 1) === minGen);
+            const primaryRoots = topGenMembers.filter(m => (!m.ayahId || m.ayahId.trim() === "") && (!m.ibuId || m.ibuId.trim() === ""));
+
+            if (primaryRoots.length > 0) rootCandidates = [primaryRoots[0]];
+            else if (topGenMembers.length > 0) rootCandidates = [topGenMembers[0]];
         }
-    });
+
+        rootCandidates.forEach(root => {
+            if (!renderedMemberIds.has(root.id)) {
+                const treeNode = buildTreeNode(root, filteredMembers);
+                if (treeNode) treeWrapper.appendChild(treeNode);
+            }
+        });
+    }
 
     container.appendChild(treeWrapper);
     setTimeout(() => { container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2; }, 100);
