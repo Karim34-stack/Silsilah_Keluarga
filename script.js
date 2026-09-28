@@ -1,7 +1,7 @@
 // ============================================================
 // KONFIGURASI DATABASE & STATE APLIKASI
 // ============================================================
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwjNuYzwMYP1lA8kNzwuqwPSezppuv_u2DOejjCx0mU6Y-BLnRhllriIaI-ayGs60-otg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyI_d7HDbDyai1n_ybJJDxV1dVlz5fGuUu7vhEzFJFwwW7tI0_S5UlnwH7hDp_Rhk5Biw/exec";
 
 let members = [];
 let isAdmin = false;
@@ -12,9 +12,7 @@ const ADMIN_PIN = "1234";
 const defaultMembers = [
     { id: "m1", nama: "Kyai Totaruno", gender: "L", generasi: 1, status: "Wafat", ayahId: "", ibuId: "", pasanganId: "", foto: "", catatan: "Leluhur Utama" },
     { id: "m2", nama: "Karsodikromo", gender: "L", generasi: 2, status: "Wafat", ayahId: "m1", ibuId: "", pasanganId: "m3", foto: "", catatan: "" },
-    { id: "m3", nama: "Siah", gender: "P", generasi: 2, status: "Wafat", ayahId: "", ibuId: "", pasanganId: "m2", foto: "", catatan: "" },
-    { id: "m4", nama: "Pramudjo Suwarno", gender: "L", generasi: 3, status: "Wafat", ayahId: "m2", ibuId: "m3", pasanganId: "", foto: "", catatan: "" },
-    { id: "m5", nama: "Mar Jiyem", gender: "L", generasi: 3, status: "Hidup", ayahId: "m2", ibuId: "m3", pasanganId: "", foto: "", catatan: "" }
+    { id: "m3", nama: "Siah", gender: "P", generasi: 2, status: "Wafat", ayahId: "", ibuId: "", pasanganId: "m2", foto: "", catatan: "" }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -34,79 +32,48 @@ function updateDbBadge(status, text) {
 }
 
 // ------------------------------------------------------------
-// 1. KONEKSI GOOGLE SHEETS
+// 1. KONEKSI & SINKRONISASI GOOGLE SHEETS
 // ------------------------------------------------------------
-async function () {
-    updateDbBadge('loading', 'Menghubungkan Database...');
-
-    if (!SCRIPT_URL || SCRIPT_URL.includes("YOUR_SCRIPT_ID_HERE")) {
-        loadLocalStorage();
-        return;
-    }
-
-    try {
-        const response = await fetch(SCRIPT_URL);
-        const data = await response.json();
-
-        if (Array.isArray(data) && data.length > 0) {
-            members = data.map(item => ({
-                ...item,
-                generasi: parseInt(item.generasi) || 1
-            }));
-            localStorage.setItem('local_members', JSON.stringify(members));
-            updateDbBadge('connected', 'Google Sheets Terhubung');
-        } else {
-            loadLocalStorage();
-        }
-    } catch (err) {
-        console.error('Database Sync Error:', err);
-        loadLocalStorage();
-    }
-
-    renderApp();
-}
-
-// Tambahkan / perbarui fungsi deduplikasi di script.js
 function removeDuplicateMembers(dataArray) {
+    if (!Array.isArray(dataArray)) return [];
     const seen = new Set();
     return dataArray.filter(item => {
-        if (!item.id || seen.has(item.id)) {
-            return false;
-        }
+        if (!item.id || seen.has(item.id)) return false;
         seen.add(item.id);
         return true;
     });
 }
 
-// Perbarui fungsi fetchDataFromDatabase()
 async function fetchDataFromDatabase() {
-    updateDbBadge('loading', 'Menghubungkan Database...');
+    updateDbBadge('loading', 'Menghubungkan...');
 
     if (!SCRIPT_URL || SCRIPT_URL.includes("YOUR_SCRIPT_ID_HERE")) {
         loadLocalStorage();
         return;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     try {
-        const response = await fetch(SCRIPT_URL);
+        const response = await fetch(SCRIPT_URL, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error("HTTP error");
         const data = await response.json();
 
         if (Array.isArray(data) && data.length > 0) {
-            // Saring duplikat dari data yang diterima
-            const uniqueData = removeDuplicateMembers(data);
-            
-            members = uniqueData.map(item => ({
+            members = removeDuplicateMembers(data).map(item => ({
                 ...item,
                 generasi: parseInt(item.generasi) || 1
             }));
-
             localStorage.setItem('local_members', JSON.stringify(members));
             updateDbBadge('connected', 'Google Sheets Terhubung');
         } else {
             loadLocalStorage();
         }
     } catch (err) {
-        console.error('Database Sync Error:', err);
+        console.warn('Fallback ke Mode Lokal:', err);
         loadLocalStorage();
     }
 
@@ -121,6 +88,7 @@ function loadLocalStorage() {
 }
 
 async function saveDataToDatabase() {
+    members = removeDuplicateMembers(members);
     localStorage.setItem('local_members', JSON.stringify(members));
     renderApp();
 
@@ -135,7 +103,6 @@ async function saveDataToDatabase() {
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify({ action: 'saveAll', members: members })
         });
-
         setTimeout(() => updateDbBadge('connected', 'Google Sheets Terhubung'), 800);
     } catch (err) {
         console.error('Save Error:', err);
@@ -144,10 +111,7 @@ async function saveDataToDatabase() {
 }
 
 // ------------------------------------------------------------
-// 2. PEMPROSESAN & UPLOAD FOTO PROFIL
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// UNGGAH FOTO PROFIL (METODE HIDDEN IFRAME - BEBAS CORS)
+// 2. UPLOAD FOTO PROFIL VIA HIDDEN IFRAME
 // ------------------------------------------------------------
 async function handleFileSelect(event) {
     const file = event.target.files[0];
@@ -160,7 +124,6 @@ async function handleFileSelect(event) {
     }
 
     try {
-        // Kompresi foto awal di browser (~40KB)
         const compressedBase64 = await resizeAndCompressImage(file, 400, 400, 0.8);
 
         if (!SCRIPT_URL || SCRIPT_URL.includes("YOUR_SCRIPT_ID_HERE")) {
@@ -172,7 +135,6 @@ async function handleFileSelect(event) {
             return;
         }
 
-        // Buat iframe tersembunyi
         let iframe = document.getElementById('upload-iframe-target');
         if (!iframe) {
             iframe = document.createElement('iframe');
@@ -182,7 +144,6 @@ async function handleFileSelect(event) {
             document.body.appendChild(iframe);
         }
 
-        // Buat form tersembunyi
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = SCRIPT_URL;
@@ -206,17 +167,12 @@ async function handleFileSelect(event) {
         document.body.appendChild(form);
         form.submit();
 
-        // Setelah form dikirim, konfirmasi status dan isi link
         setTimeout(() => {
-            // Karena diproses via iframe, foto sudah dipastikan terunggah ke Drive
-            document.getElementById('form-foto').value = compressedBase64; // Pasang penampil gambar instan
-            
+            document.getElementById('form-foto').value = compressedBase64;
             if (statusElem) {
-                statusElem.innerText = "✓ Foto berhasil tersimpan ke folder Drive (Silsilah_Foto_Profil)!";
+                statusElem.innerText = "✓ Foto berhasil tersimpan di folder Drive!";
                 statusElem.className = "text-[10px] text-emerald-400 mt-1 block font-semibold";
             }
-
-            // Bersihkan form sementara
             document.body.removeChild(form);
         }, 2000);
 
@@ -238,8 +194,7 @@ function resizeAndCompressImage(file, maxWidth, maxHeight, quality) {
             img.src = e.target.result;
             img.onload = function () {
                 const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
+                let width = img.width, height = img.height;
 
                 if (width > height) {
                     if (width > maxWidth) {
@@ -255,7 +210,6 @@ function resizeAndCompressImage(file, maxWidth, maxHeight, quality) {
 
                 canvas.width = width;
                 canvas.height = height;
-
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
                 resolve(canvas.toDataURL('image/jpeg', quality));
@@ -267,7 +221,7 @@ function resizeAndCompressImage(file, maxWidth, maxHeight, quality) {
 }
 
 // ------------------------------------------------------------
-// 3. RENDER POHON & FILTER AKAR KELUARGA
+// 3. RENDER POHON & DEDUP AKAR KELUARGA
 // ------------------------------------------------------------
 function updateFilterOptions() {
     const genSelect = document.getElementById('filter-gen');
@@ -282,13 +236,7 @@ function updateFilterOptions() {
     const rootSelect = document.getElementById('filter-root');
     if (rootSelect) {
         const currentVal = rootSelect.value;
-        
-        let rootMembers = members.filter(m => {
-            const hasNoAyah = !m.ayahId || m.ayahId.toString().trim() === "" || m.ayahId === "undefined";
-            const hasNoIbu = !m.ibuId || m.ibuId.toString().trim() === "" || m.ibuId === "undefined";
-            return hasNoAyah && hasNoIbu;
-        });
-
+        let rootMembers = members.filter(m => (!m.ayahId || m.ayahId.trim() === "") && (!m.ibuId || m.ibuId.trim() === ""));
         if (rootMembers.length === 0) {
             const minGen = Math.min(...members.map(m => parseInt(m.generasi) || 1));
             rootMembers = members.filter(m => (parseInt(m.generasi) || 1) === minGen);
@@ -298,12 +246,7 @@ function updateFilterOptions() {
         rootMembers.forEach(r => {
             rootSelect.innerHTML += `<option value="${r.id}">${r.nama} (Gen ${r.generasi || 1})</option>`;
         });
-
-        if ([...rootSelect.options].some(opt => opt.value === currentVal)) {
-            rootSelect.value = currentVal;
-        } else {
-            rootSelect.value = "ALL";
-        }
+        rootSelect.value = [...rootSelect.options].some(opt => opt.value === currentVal) ? currentVal : "ALL";
     }
 }
 
@@ -318,35 +261,25 @@ function renderApp() {
     const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
     const selectedRoot = document.getElementById('filter-root')?.value || 'ALL';
 
-    // 1. Filter berdasarkan pencarian nama
     let filtered = members.filter(m => (m.nama || '').toLowerCase().includes(searchQuery));
 
-    // 2. Filter berdasarkan generasi
     if (selectedGen !== 'ALL') {
         filtered = filtered.filter(m => (parseInt(m.generasi) || 1) === parseInt(selectedGen));
     }
 
-    // 3. Filter berdasarkan akar keluarga (beserta seluruh keturunannya)
     if (selectedRoot !== 'ALL') {
         const descendantIds = getAllDescendantsAndSpouses(selectedRoot);
         filtered = filtered.filter(m => descendantIds.has(m.id));
     }
 
-    // ------------------------------------------------------------
-    // PERBAIKAN: UPDATE INDIKATOR JUMLAH ANGGOTA SESUAI FILTER
-    // ------------------------------------------------------------
     const countElem = document.getElementById('member-count');
-    if (countElem) {
-        countElem.innerText = filtered.length;
-    }
+    if (countElem) countElem.innerText = filtered.length;
 
-    // Tampilkan pesan jika tidak ada data yang cocok dengan filter
     if (filtered.length === 0) {
         container.innerHTML = `<div class="text-center py-12 text-slate-500 font-medium">Tidak ada data anggota ditemukan.</div>`;
         return;
     }
 
-    // Render tampilan berdasarkan pilihan mode (Pohon / Grid)
     if (viewMode === 'grid') {
         renderGridView(container, filtered);
     } else {
@@ -363,11 +296,7 @@ function getAllDescendantsAndSpouses(rootId) {
         if (!result.has(currentId)) {
             result.add(currentId);
             const currentObj = members.find(m => m.id === currentId);
-            
-            if (currentObj && currentObj.pasanganId) {
-                result.add(currentObj.pasanganId);
-            }
-
+            if (currentObj && currentObj.pasanganId) result.add(currentObj.pasanganId);
             const children = members.filter(m => m.ayahId === currentId || m.ibuId === currentId);
             children.forEach(c => queue.push(c.id));
         }
@@ -380,34 +309,15 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     let rootCandidates = [];
 
     if (selectedRoot !== 'ALL') {
-        // Jika filter akar dipilih spesifik
         const rootObj = members.find(m => m.id === selectedRoot);
         if (rootObj) rootCandidates = [rootObj];
     } else {
-        // ------------------------------------------------------------
-        // PERBAIKAN: CARI LELUHUR TERTINGGI (GENERASI TERKECIL)
-        // ------------------------------------------------------------
-        // 1. Cari generasi terkecil yang ada di database (misal Gen 1)
         const minGen = Math.min(...filteredMembers.map(m => parseInt(m.generasi) || 1));
-        
-        // 2. Ambil hanya anggota dengan generasi paling atas tersebut
         const topGenMembers = filteredMembers.filter(m => (parseInt(m.generasi) || 1) === minGen);
+        const primaryRoots = topGenMembers.filter(m => (!m.ayahId || m.ayahId.trim() === "") && (!m.ibuId || m.ibuId.trim() === ""));
 
-        // 3. Prioritaskan anggota yang tidak punya ayah dan ibu
-        const primaryRoots = topGenMembers.filter(m => {
-            const hasNoAyah = !m.ayahId || m.ayahId.toString().trim() === "";
-            const hasNoIbu = !m.ibuId || m.ibuId.toString().trim() === "";
-            return hasNoAyah && hasNoIbu;
-        });
-
-        // 4. Jika ada pasangan, ambil salah satu saja sebagai pangkal pohon utama
-        if (primaryRoots.length > 0) {
-            // Hindari mengambil pasangan dari root pertama sebagai root kedua
-            const mainRoot = primaryRoots[0];
-            rootCandidates = [mainRoot];
-        } else if (topGenMembers.length > 0) {
-            rootCandidates = [topGenMembers[0]];
-        }
+        if (primaryRoots.length > 0) rootCandidates = [primaryRoots[0]];
+        else if (topGenMembers.length > 0) rootCandidates = [topGenMembers[0]];
     }
 
     const treeWrapper = document.createElement('div');
@@ -421,11 +331,7 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     });
 
     container.appendChild(treeWrapper);
-
-    // Otomatis posisikan scroll ke tengah
-    setTimeout(() => {
-        container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
-    }, 100);
+    setTimeout(() => { container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2; }, 100);
 }
 
 function buildTreeNode(member, allMembers) {
@@ -464,9 +370,8 @@ function buildTreeNode(member, allMembers) {
         lineDown.className = 'tree-line-v h-6';
         nodeContainer.appendChild(lineDown);
 
-        // Ganti baris childrenContainer di fungsi buildTreeNode:
-const childrenContainer = document.createElement('div');
-childrenContainer.className = 'flex items-start justify-start relative pt-4 gap-6 w-max';
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = 'flex items-start justify-start relative pt-4 gap-6 w-max';
 
         if (children.length > 1) {
             const lineHorizontal = document.createElement('div');
@@ -491,9 +396,7 @@ childrenContainer.className = 'flex items-start justify-start relative pt-4 gap-
             }
         });
 
-        if (childrenContainer.children.length > 0) {
-            nodeContainer.appendChild(childrenContainer);
-        }
+        if (childrenContainer.children.length > 0) nodeContainer.appendChild(childrenContainer);
     }
 
     return nodeContainer;
@@ -566,10 +469,7 @@ function createMemberCard(m) {
 }
 
 // ------------------------------------------------------------
-// 4. EKSPORED EXPORT PDF
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// EKSPORED EXPORT PDF (FULL LENGKAP DENGAN TEKS & FOTO)
+// 4. EKSPORED EXPORT PDF (BEBAS KOTAK ABU-ABU)
 // ------------------------------------------------------------
 async function exportToPDF() {
     const container = document.getElementById('tree-container');
@@ -577,7 +477,6 @@ async function exportToPDF() {
 
     updateDbBadge('loading', 'Membuat File PDF...');
 
-    // 1. Simpan posisi scroll & style asli
     const originalScrollLeft = container.scrollLeft;
     const originalStyle = {
         overflow: container.style.overflow,
@@ -586,25 +485,29 @@ async function exportToPDF() {
         height: container.style.height
     };
 
-    // 2. Cari elemen pembungkus pohon
     const treeWrapper = container.querySelector('div') || container;
-    
-    // Hitung total lebar dan tinggi sebenarnya yang dibutuhkan seluruh kartu silsilah
-    const neededWidth = Math.max(treeWrapper.scrollWidth, container.scrollWidth) + 100;
-    const neededHeight = Math.max(treeWrapper.scrollHeight, container.scrollHeight) + 100;
+    const neededWidth = Math.max(treeWrapper.scrollWidth, container.scrollWidth) + 120;
+    const neededHeight = Math.max(treeWrapper.scrollHeight, container.scrollHeight) + 120;
 
-    // 3. Buka kontainer secara penuh agar seluruh teks & elemen terlihat oleh Canvas
     container.style.overflow = 'visible';
     container.style.width = `${neededWidth}px`;
     container.style.maxWidth = 'none';
     container.style.height = `${neededHeight}px`;
 
-    // 4. Jeda sebentar agar browser selesai melakukan re-render layout & teks
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const images = container.getElementsByTagName('img');
+    const imagePromises = Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+            img.onload = resolve;
+            img.onerror = resolve;
+        });
+    });
 
-    // 5. Opsi rendering html2canvas + jsPDF yang presisi
+    await Promise.all(imagePromises);
+    await new Promise(resolve => setTimeout(resolve, 600));
+
     const opt = {
-        margin:       [10, 10, 10, 10],
+        margin:       [15, 15, 15, 15],
         filename:     `Silsilah_Keluarga_${Date.now()}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
@@ -612,6 +515,7 @@ async function exportToPDF() {
             useCORS: true, 
             allowTaint: true,
             logging: false,
+            backgroundColor: '#0f172a',
             width: neededWidth,
             height: neededHeight,
             windowWidth: neededWidth,
@@ -619,26 +523,24 @@ async function exportToPDF() {
             scrollX: 0,
             scrollY: 0
         },
-        jsPDF:        { unit: 'px', format: [neededWidth + 40, neededHeight + 40], orientation: 'landscape' }
+        jsPDF:        { unit: 'px', format: [neededWidth + 60, neededHeight + 60], orientation: 'landscape' }
     };
 
     try {
-        // Cetak elemen ke PDF
         await html2pdf().set(opt).from(container).save();
     } catch (err) {
         console.error('PDF Export Error:', err);
-        alert('Gagal mengekspor PDF. Silakan coba kembali.');
+        alert('Gagal mengekspor PDF.');
     } finally {
-        // 6. Kembalikan gaya & posisi scroll ke kondisi awal
         container.style.overflow = originalStyle.overflow;
         container.style.width = originalStyle.width;
         container.style.maxWidth = originalStyle.maxWidth;
         container.style.height = originalStyle.height;
         container.scrollLeft = originalScrollLeft;
-
         updateDbBadge('connected', 'Google Sheets Terhubung');
     }
 }
+
 // ------------------------------------------------------------
 // 5. EVENT FORM & MODAL HANDLERS
 // ------------------------------------------------------------
