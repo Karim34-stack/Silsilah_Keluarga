@@ -389,8 +389,9 @@ function buildTreeNode(member, allMembers) {
         lineDown.className = 'tree-line-v h-6';
         nodeContainer.appendChild(lineDown);
 
-        const childrenContainer = document.createElement('div');
-        childrenContainer.className = 'flex items-start justify-center relative pt-4 gap-6';
+        // Ganti baris childrenContainer di fungsi buildTreeNode:
+const childrenContainer = document.createElement('div');
+childrenContainer.className = 'flex items-start justify-start relative pt-4 gap-6 w-max';
 
         if (children.length > 1) {
             const lineHorizontal = document.createElement('div');
