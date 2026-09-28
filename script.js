@@ -5,23 +5,25 @@
 const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzBo9d7OP8HX4V8Ti6vD2z2xz62WBTYk17aj9zKATcymeOfr4axzsOgkns8l4sVP1sCog/exec";
 
 // ============================================================
-// DATA DEFAULTS & GLOBAL STATES
+// DATA SILSILAH & GLOBAL STATES
 // ============================================================
 let members = [
-    { id: "1", nama: "KYAI TOTARUNO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 1, ayahId: "", ibuId: "", pasanganId: "2" },
-    { id: "2", nama: "NYAI TOTARUNO", gender: "Perempuan", statusHidup: "Wafat", generasi: 1, ayahId: "", ibuId: "", pasanganId: "1" },
+    { id: "1", nama: "PRAMUDJO SUWARNO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 1, ayahId: "", ibuId: "", pasanganId: "" },
     
-    { id: "3", nama: "PRAMUDJO SUWARNO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 2, ayahId: "1", ibuId: "2", pasanganId: "" },
+    { id: "2", nama: "SUTASMIATUN", gender: "Perempuan", statusHidup: "Hidup", generasi: 2, ayahId: "1", ibuId: "", pasanganId: "3" },
+    { id: "3", nama: "TOTOK SUGIARTO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 2, ayahId: "", ibuId: "", pasanganId: "2" },
     
-    { id: "4", nama: "SUTASMIATUN", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "", pasanganId: "5" },
-    { id: "5", nama: "TOTOK SUGIARTO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 3, ayahId: "", ibuId: "", pasanganId: "4" },
-    
-    { id: "6", nama: "SUKATRI", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "", pasanganId: "7" },
-    { id: "7", nama: "PANGGIH", gender: "Laki-laki", statusHidup: "Hidup", generasi: 3, ayahId: "", ibuId: "", pasanganId: "6" },
+    { id: "4", nama: "SUKATRI", gender: "Perempuan", statusHidup: "Hidup", generasi: 2, ayahId: "1", ibuId: "", pasanganId: "5" },
+    { id: "5", nama: "PANGGIH", gender: "Laki-laki", statusHidup: "Hidup", generasi: 2, ayahId: "", ibuId: "", pasanganId: "4" },
 
-    { id: "8", nama: "TAMI", gender: "Perempuan", statusHidup: "Hidup", generasi: 4, ayahId: "5", ibuId: "4", pasanganId: "" },
-    { id: "9", nama: "HANA", gender: "Perempuan", statusHidup: "Hidup", generasi: 4, ayahId: "5", ibuId: "4", pasanganId: "" },
-    { id: "10", nama: "HANI", gender: "Perempuan", statusHidup: "Hidup", generasi: 4, ayahId: "5", ibuId: "4", pasanganId: "" }
+    { id: "6", nama: "SRUASTI", gender: "Perempuan", statusHidup: "Hidup", generasi: 2, ayahId: "1", ibuId: "", pasanganId: "7" },
+    { id: "7", nama: "NARSANTOSO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 2, ayahId: "", ibuId: "", pasanganId: "6" },
+
+    { id: "8", nama: "VIVI", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "2", pasanganId: "" },
+    { id: "9", nama: "TAMI", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "2", pasanganId: "" },
+    { id: "10", nama: "HANA", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "2", pasanganId: "" },
+    { id: "11", nama: "HANI", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "2", pasanganId: "" },
+    { id: "12", nama: "DAVA FN", gender: "Laki-laki", statusHidup: "Hidup", generasi: 3, ayahId: "7", ibuId: "6", pasanganId: "" }
 ];
 
 let renderedMemberIds = new Set();
@@ -31,7 +33,7 @@ const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 2.0;
 
 // ============================================================
-// 1. INIT APLIKASI
+// 1. INITIALIZATION & ADMIN TOGGLE
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-input');
@@ -48,7 +50,7 @@ function loadDataFromGoogleSheets() {
     renderApp();
 }
 
-// Switch Mode Admin
+// Mode Admin Khusus EDIT & HAPUS
 function toggleAdminMode() {
     isAdminMode = !isAdminMode;
     const btnAdmin = document.getElementById('btn-admin');
@@ -56,20 +58,21 @@ function toggleAdminMode() {
     const textAdmin = document.getElementById('text-admin');
 
     if (isAdminMode) {
-        btnAdmin.className = "px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg border border-emerald-500 flex items-center gap-2 font-medium transition shadow-lg shadow-emerald-900/30";
-        iconAdmin.className = "fa-solid fa-lock-open text-xs";
-        textAdmin.innerText = "Mode Admin (Aktif)";
+        btnAdmin.className = "px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg border border-emerald-500 flex items-center gap-2 font-medium transition shadow-lg shadow-emerald-900/30 cursor-pointer";
+        if (iconAdmin) iconAdmin.className = "fa-solid fa-lock-open text-xs";
+        if (textAdmin) textAdmin.innerText = "Mode Admin (Aktif)";
     } else {
-        btnAdmin.className = "px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center gap-2 font-medium transition";
-        iconAdmin.className = "fa-solid fa-lock text-xs";
-        textAdmin.innerText = "Mode Admin";
+        btnAdmin.className = "px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center gap-2 font-medium transition cursor-pointer";
+        if (iconAdmin) iconAdmin.className = "fa-solid fa-lock text-xs";
+        if (textAdmin) textAdmin.innerText = "Mode Admin";
     }
 
+    // Re-render kartu untuk memunculkan/menyembunyikan tombol Edit/Hapus
     renderApp();
 }
 
 // ============================================================
-// 2. RENDER POHON & FILTER
+// 2. RENDER POHON & KARTU ANGGOTA
 // ============================================================
 function renderApp() {
     const container = document.getElementById('tree-container');
@@ -156,7 +159,6 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     applyZoom();
 }
 
-// Rekursi Pembangun Cabang
 function buildTreeNode(member, filteredList) {
     if (!member) return null;
 
@@ -210,7 +212,7 @@ function buildTreeNode(member, filteredList) {
     return nodeContainer;
 }
 
-// Kartu Anggota Individual
+// Pembuat Kartu Anggota
 function createMemberCard(member) {
     const card = document.createElement('div');
     card.className = 'relative group flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 p-2.5 rounded-xl min-w-[170px] shadow-sm hover:border-emerald-500/50 transition cursor-pointer';
@@ -233,10 +235,22 @@ function createMemberCard(member) {
                 </span>
             </div>
         </div>
+
+        <!-- Tombol (+) Tambah Kerabat: SELALU MUNCUL (Di Luar Mode Admin) -->
+        <button onclick="openModalForRelation('${member.id}')" title="Tambah Anak / Kerabat" class="absolute -top-2 -right-2 bg-emerald-600 hover:bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md transition z-10 cursor-pointer">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+
+        <!-- Tombol EDIT & HAPUS: HANYA MUNCUL SAAT MODE ADMIN AKTIF -->
         ${isAdminMode ? `
-            <button onclick="openModalForRelation('${member.id}')" title="Tambah Anak / Kerabat" class="absolute -top-2 -right-2 bg-emerald-600 hover:bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md transition z-10">
-                <i class="fa-solid fa-plus"></i>
-            </button>
+            <div class="absolute -bottom-2 right-2 flex items-center gap-1 z-10">
+                <button onclick="editMember('${member.id}')" title="Edit Data" class="bg-amber-600 hover:bg-amber-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow-md transition cursor-pointer">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <button onclick="deleteMember('${member.id}')" title="Hapus Anggota" class="bg-rose-600 hover:bg-rose-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow-md transition cursor-pointer">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
         ` : ''}
     `;
 
@@ -297,6 +311,7 @@ function updateFilterOptions() {
 function openModal() {
     populateModalDropdowns();
     document.getElementById('form-add-member').reset();
+    document.getElementById('edit-member-id').value = "";
     document.getElementById('modal-title').innerText = "Tambah Anggota Keluarga";
     document.getElementById('modal-tambah').classList.remove('hidden');
 }
@@ -306,7 +321,7 @@ function openModalForRelation(parentId) {
     if (!parent) return;
 
     openModal();
-    document.getElementById('modal-title').innerText = `Tambah Keturunan dari ${parent.nama}`;
+    document.getElementById('modal-title').innerText = `Tambah Anak dari ${parent.nama}`;
 
     if (parent.gender === 'Laki-laki') {
         document.getElementById('add-ayah').value = parent.id;
@@ -317,6 +332,41 @@ function openModalForRelation(parentId) {
     }
 
     document.getElementById('add-generasi').value = (parseInt(parent.generasi) || 1) + 1;
+}
+
+function editMember(memberId) {
+    const member = members.find(m => m.id === memberId);
+    if (!member) return;
+
+    openModal();
+    document.getElementById('edit-member-id').value = member.id;
+    document.getElementById('modal-title').innerText = `Edit Data: ${member.nama}`;
+    document.getElementById('add-nama').value = member.nama;
+    document.getElementById('add-gender').value = member.gender || 'Laki-laki';
+    document.getElementById('add-status').value = member.statusHidup || 'Hidup';
+    document.getElementById('add-generasi').value = member.generasi || 1;
+    document.getElementById('add-ayah').value = member.ayahId || '';
+    document.getElementById('add-ibu').value = member.ibuId || '';
+    document.getElementById('add-pasangan').value = member.pasanganId || '';
+}
+
+function deleteMember(memberId) {
+    const member = members.find(m => m.id === memberId);
+    if (!member) return;
+
+    if (confirm(`Apakah Anda yakin ingin menghapus "${member.nama}" dari silsilah?`)) {
+        members = members.filter(m => m.id !== memberId);
+        
+        // Bersihkan referensi yang mengarah ke id yang dihapus
+        members.forEach(m => {
+            if (m.pasanganId === memberId) m.pasanganId = "";
+            if (m.ayahId === memberId) m.ayahId = "";
+            if (m.ibuId === memberId) m.ibuId = "";
+        });
+
+        updateFilterOptions();
+        renderApp();
+    }
 }
 
 function closeModal() {
@@ -349,8 +399,9 @@ function populateModalDropdowns() {
 function submitMember(event) {
     event.preventDefault();
 
-    const newMember = {
-        id: String(Date.now()),
+    const editId = document.getElementById('edit-member-id').value;
+    const memberData = {
+        id: editId ? editId : String(Date.now()),
         nama: document.getElementById('add-nama').value.trim().toUpperCase(),
         gender: document.getElementById('add-gender').value,
         statusHidup: document.getElementById('add-status').value,
@@ -360,11 +411,19 @@ function submitMember(event) {
         pasanganId: document.getElementById('add-pasangan').value
     };
 
-    members.push(newMember);
+    if (editId) {
+        // Mode Edit: Update data yang ada
+        const index = members.findIndex(m => m.id === editId);
+        if (index !== -1) members[index] = memberData;
+    } else {
+        // Mode Tambah Baru
+        members.push(memberData);
+    }
 
-    if (newMember.pasanganId) {
-        const spouse = members.find(m => m.id === newMember.pasanganId);
-        if (spouse) spouse.pasanganId = newMember.id;
+    // Hubungkan relasi pasangan timbal balik jika diisi
+    if (memberData.pasanganId) {
+        const spouse = members.find(m => m.id === memberData.pasanganId);
+        if (spouse) spouse.pasanganId = memberData.id;
     }
 
     updateFilterOptions();
