@@ -1,39 +1,71 @@
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+/* Custom Scrollbar & Container Styling */
+#tree-container {
+    overflow: auto;
+    position: relative;
+    width: 100%;
+    min-height: 500px;
 }
 
-::-webkit-scrollbar-track {
-    background: #0f172a;
+/* Wrapper Utama Pohon Silsilah */
+.tree-wrapper-inner {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding: 1.5rem 3rem;
+    min-width: 100%;
+    width: max-content;
+    margin: 0 auto;
+    transform-origin: top center;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-::-webkit-scrollbar-thumb {
-    background: #334155;
-    border-radius: 4px;
+/* Kotak Pasangan / Pasangan Suami Istri */
+.couple-box {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: rgba(30, 41, 59, 0.8);
+    padding: 0.75rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(51, 65, 85, 0.8);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
-/* Garis Cabang Pohon Silsilah (Tree CSS) */
+/* Control Bar Zoom */
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    background-color: #0f172a;
+    padding: 0.25rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(51, 65, 85, 0.8);
+    font-size: 0.75rem;
+}
+
+.zoom-btn {
+    padding: 0.375rem 0.625rem;
+    border-radius: 0.5rem;
+    color: #cbd5e1;
+    transition: all 0.2s;
+}
+
+.zoom-btn:hover {
+    color: #ffffff;
+    background-color: #1e293b;
+}
+
+/* Garis Hubung Pohon (Opsional Jika Menggunakan Struktur Rekursif) */
 .tree-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     position: relative;
 }
 
-.tree-line-v {
-    width: 2px;
-    background-color: #475569;
-    margin: 0 auto;
-}
-
-.tree-line-h {
-    height: 2px;
-    background-color: #475569;
-}
-
-.member-card {
-    transition: all 0.2s ease-in-out;
-}
-
-.member-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+.tree-children {
+    display: flex;
+    gap: 1.5rem;
+    position: relative;
+    padding-top: 1.5rem;
 }
