@@ -270,22 +270,35 @@ function renderApp() {
     const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
     const selectedRoot = document.getElementById('filter-root')?.value || 'ALL';
 
+    // 1. Filter berdasarkan pencarian nama
     let filtered = members.filter(m => (m.nama || '').toLowerCase().includes(searchQuery));
 
+    // 2. Filter berdasarkan generasi
     if (selectedGen !== 'ALL') {
         filtered = filtered.filter(m => (parseInt(m.generasi) || 1) === parseInt(selectedGen));
     }
 
+    // 3. Filter berdasarkan akar keluarga (beserta seluruh keturunannya)
     if (selectedRoot !== 'ALL') {
         const descendantIds = getAllDescendantsAndSpouses(selectedRoot);
         filtered = filtered.filter(m => descendantIds.has(m.id));
     }
 
+    // ------------------------------------------------------------
+    // PERBAIKAN: UPDATE INDIKATOR JUMLAH ANGGOTA SESUAI FILTER
+    // ------------------------------------------------------------
+    const countElem = document.getElementById('member-count');
+    if (countElem) {
+        countElem.innerText = filtered.length;
+    }
+
+    // Tampilkan pesan jika tidak ada data yang cocok dengan filter
     if (filtered.length === 0) {
         container.innerHTML = `<div class="text-center py-12 text-slate-500 font-medium">Tidak ada data anggota ditemukan.</div>`;
         return;
     }
 
+    // Render tampilan berdasarkan pilihan mode (Pohon / Grid)
     if (viewMode === 'grid') {
         renderGridView(container, filtered);
     } else {
