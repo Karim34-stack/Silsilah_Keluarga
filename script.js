@@ -493,9 +493,8 @@ function createMemberCard(m) {
 // ------------------------------------------------------------
 // 4. EKSPORED EXPORT PDF
 // ------------------------------------------------------------
-
 // ------------------------------------------------------------
-// EKSPORED EXPORT PDF (UTUH TANPA TERPOTONG)
+// EKSPORED EXPORT PDF (FULL LENGKAP DENGAN TEKS & FOTO)
 // ------------------------------------------------------------
 async function exportToPDF() {
     const container = document.getElementById('tree-container');
@@ -503,26 +502,32 @@ async function exportToPDF() {
 
     updateDbBadge('loading', 'Membuat File PDF...');
 
-    // 1. Simpan gaya asli sebelum ekspor
+    // 1. Simpan posisi scroll & style asli
+    const originalScrollLeft = container.scrollLeft;
     const originalStyle = {
         overflow: container.style.overflow,
         width: container.style.width,
         maxWidth: container.style.maxWidth,
-        position: container.style.position
+        height: container.style.height
     };
 
-    // 2. Ambil elemen pembungkus utama pohon
-    const treeWrapper = container.querySelector('div');
+    // 2. Cari elemen pembungkus pohon
+    const treeWrapper = container.querySelector('div') || container;
     
-    // 3. Hitung lebar penuh yang dibutuhkan agar seluruh cabang pohon terekam
-    const fullWidth = treeWrapper ? Math.max(treeWrapper.scrollWidth, container.scrollWidth) + 80 : container.scrollWidth + 80;
+    // Hitung total lebar dan tinggi sebenarnya yang dibutuhkan seluruh kartu silsilah
+    const neededWidth = Math.max(treeWrapper.scrollWidth, container.scrollWidth) + 100;
+    const neededHeight = Math.max(treeWrapper.scrollHeight, container.scrollHeight) + 100;
 
-    // 4. Buka lebar kontainer secara paksa agar tidak ada elemen terpotong oleh scrollbar
+    // 3. Buka kontainer secara penuh agar seluruh teks & elemen terlihat oleh Canvas
     container.style.overflow = 'visible';
-    container.style.width = `${fullWidth}px`;
+    container.style.width = `${neededWidth}px`;
     container.style.maxWidth = 'none';
+    container.style.height = `${neededHeight}px`;
 
-    // Konfigurasi ekspor PDF (Otomatis menyesuaikan dengan ukuran pohon)
+    // 4. Jeda sebentar agar browser selesai melakukan re-render layout & teks
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // 5. Opsi rendering html2canvas + jsPDF yang presisi
     const opt = {
         margin:       [10, 10, 10, 10],
         filename:     `Silsilah_Keluarga_${Date.now()}.pdf`,
@@ -530,26 +535,31 @@ async function exportToPDF() {
         html2canvas:  { 
             scale: 2, 
             useCORS: true, 
+            allowTaint: true,
             logging: false,
-            windowWidth: fullWidth, // Mengambil tangkapan layar seluas total lebar pohon
+            width: neededWidth,
+            height: neededHeight,
+            windowWidth: neededWidth,
+            windowHeight: neededHeight,
             scrollX: 0,
             scrollY: 0
         },
-        jsPDF:        { unit: 'mm', format: 'a2', orientation: 'landscape' } // Menggunakan format A2 Lanskap agar muat banyak cabang
+        jsPDF:        { unit: 'px', format: [neededWidth + 40, neededHeight + 40], orientation: 'landscape' }
     };
 
     try {
-        // Jalankan proses pembuatan PDF
+        // Cetak elemen ke PDF
         await html2pdf().set(opt).from(container).save();
     } catch (err) {
         console.error('PDF Export Error:', err);
-        alert('Gagal mengekspor PDF. Pastikan jaringan stabil.');
+        alert('Gagal mengekspor PDF. Silakan coba kembali.');
     } finally {
-        // 5. Kembalikan tampilan halaman web ke kondisi semula
+        // 6. Kembalikan gaya & posisi scroll ke kondisi awal
         container.style.overflow = originalStyle.overflow;
         container.style.width = originalStyle.width;
         container.style.maxWidth = originalStyle.maxWidth;
-        container.style.position = originalStyle.position;
+        container.style.height = originalStyle.height;
+        container.scrollLeft = originalScrollLeft;
 
         updateDbBadge('connected', 'Google Sheets Terhubung');
     }
