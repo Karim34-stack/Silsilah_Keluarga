@@ -1,6 +1,4 @@
-/* ============================================================
-   STYLING UTAMA & LAYOUT CONTAINER
-   ============================================================ */
+/* Container Utama Pohon */
 #tree-container {
     overflow: auto;
     position: relative;
@@ -8,7 +6,7 @@
     min-height: 600px;
 }
 
-/* Wrapper Utama Pohon Silsilah (Area Zoom Target) */
+/* Area Target Zoom */
 .tree-wrapper-inner {
     display: inline-flex;
     flex-direction: column;
@@ -22,7 +20,7 @@
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Kotak Pasangan Suami Istri (Generasi View) */
+/* Pasangan Suami Istri */
 .couple-box {
     display: flex;
     align-items: center;
@@ -34,7 +32,7 @@
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
-/* Control Bar Zoom */
+/* Zoom Control Styling */
 .zoom-controls {
     display: flex;
     align-items: center;
@@ -57,9 +55,7 @@
     background-color: #1e293b;
 }
 
-/* ============================================================
-   GARIS HUBUNG POHON SILSILAH (TREE NODES)
-   ============================================================ */
+/* Garis Hubung Vertikal & Horizontal */
 .tree-node {
     display: flex;
     flex-direction: column;
@@ -74,7 +70,6 @@
     padding-top: 1.5rem;
 }
 
-/* Garis vertikal ke anak-anak */
 .tree-children::before {
     content: '';
     position: absolute;
@@ -86,7 +81,6 @@
     transform: translateX(-50%);
 }
 
-/* Garis horizontal penghubung saudara */
 .tree-node-child {
     position: relative;
     display: flex;
