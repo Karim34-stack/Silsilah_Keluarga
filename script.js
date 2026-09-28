@@ -1,16 +1,24 @@
 // ============================================================
-// KONFIGURASI DATABASE & STATE APLIKASI
-// ============================================================
-const SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbyI_d7HDbDyai1n_ybJJDxV1dVlz5fGuUu7vhEzFJFwwW7tI0_S5UlnwH7hDp_Rhk5Biw/exec";
-
-// ============================================================
-// GLOBAL STATE & DATA CONTOH (DEFAULT)
+// DATA SILSILAH LENGKAP (CONTOH 3 GENERASI)
 // ============================================================
 let members = [
-    { id: "1", nama: "KYAI TOTARUNO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 1, ayahId: "", ibuId: "", pasanganId: "" },
-    { id: "2", nama: "KARSODIKROMO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 2, ayahId: "1", ibuId: "", pasanganId: "3" },
-    { id: "3", nama: "SIAH", gender: "Perempuan", statusHidup: "Wafat", generasi: 2, ayahId: "", ibuId: "", pasanganId: "2" }
+    // GENERASI 1 (Akar Utama)
+    { id: "1", nama: "KYAI TOTARUNO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 1, ayahId: "", ibuId: "", pasanganId: "2" },
+    { id: "2", nama: "NYAI TOTARUNO", gender: "Perempuan", statusHidup: "Wafat", generasi: 1, ayahId: "", ibuId: "", pasanganId: "1" },
+
+    // GENERASI 2 (Anak dari Kyai Totaruno)
+    { id: "3", nama: "KARSODIKROMO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 2, ayahId: "1", ibuId: "2", pasanganId: "4" },
+    { id: "4", nama: "SIAH", gender: "Perempuan", statusHidup: "Wafat", generasi: 2, ayahId: "", ibuId: "", pasanganId: "3" },
+    
+    { id: "5", nama: "SURYODIKROMO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 2, ayahId: "1", ibuId: "2", pasanganId: "6" },
+    { id: "6", nama: "MARIYAM", gender: "Perempuan", statusHidup: "Wafat", generasi: 2, ayahId: "", ibuId: "", pasanganId: "5" },
+
+    // GENERASI 3 (Cucu / Anak dari Karsodikromo)
+    { id: "7", nama: "AHMAD KARSODI", gender: "Laki-laki", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "4", pasanganId: "" },
+    { id: "8", nama: "SITI KARSODI", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "4", pasanganId: "" },
+    
+    // GENERASI 3 (Cucu / Anak dari Suryodikromo)
+    { id: "9", nama: "BUDI SURYO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 3, ayahId: "5", ibuId: "6", pasanganId: "" }
 ]; 
 
 let renderedMemberIds = new Set();
@@ -22,37 +30,36 @@ const MAX_ZOOM = 2.0;
 // 1. INISIALISASI APLIKASI
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Event listener input pencarian
     const searchInput = document.getElementById('search-input');
     if (searchInput) {
         searchInput.addEventListener('input', () => renderApp());
     }
 
-    // Panggil pemuat data & render awal
-    loadDataFromGoogleSheets();
+    // Muat opsi dropdown dan tampilkan pohon langsung
+    updateFilterOptions();
+    renderApp();
 });
 
-// Fungsi memuat data (Persiapan integrasi Google Sheets API)
+// Fungsi memuat data dari API / Google Sheets jika ada
 async function loadDataFromGoogleSheets() {
     try {
-        /* Hapus tanda komentar jika ingin terhubung ke Google Sheets Web App:
-        const response = await fetch('MASUKKAN_URL_WEB_APP_GOOGLE_SHEETS_ANDA');
+        /*
+        const response = await fetch('URL_WEB_APP_GOOGLE_SHEETS_ANDA');
         const data = await response.json();
         if (Array.isArray(data) && data.length > 0) {
             members = data;
         }
         */
     } catch (error) {
-        console.error("Gagal memuat data dari Google Sheets:", error);
+        console.error("Gagal memuat data:", error);
     } finally {
-        // PERBAIKAN UTAMA: Selalu jalankan pembaruan dropdown & render
         updateFilterOptions();
         renderApp();
     }
 }
 
 // ============================================================
-// 2. FUNGSI UTAMA RENDER APLIKASI (renderApp)
+// 2. FUNGSI UTAMA RENDER APLIKASI
 // ============================================================
 function renderApp() {
     const container = document.getElementById('tree-container');
@@ -73,7 +80,6 @@ function renderApp() {
     const totalCountEl = document.getElementById('total-count');
     if (totalCountEl) totalCountEl.innerText = filtered.length;
 
-    // Tampilan Kosong
     if (members.length === 0) {
         container.innerHTML = `
             <div class="text-center py-16 text-slate-500">
@@ -92,7 +98,7 @@ function renderApp() {
         return;
     }
 
-    // Render Pohon Silsilah
+    // Render Pohon
     renderTreeView(container, filtered, selectedRoot);
 }
 
@@ -126,10 +132,9 @@ function applyZoom() {
 }
 
 // ============================================================
-// 4. UPDATE DROPDOWN FILTER (AKAR & GENERASI)
+// 4. UPDATE DROPDOWN FILTER
 // ============================================================
 function updateFilterOptions() {
-    // Dropdown Generasi
     const genSelect = document.getElementById('filter-gen');
     if (genSelect) {
         const currentVal = genSelect.value;
@@ -139,7 +144,6 @@ function updateFilterOptions() {
         genSelect.value = [...genSelect.options].some(opt => opt.value === currentVal) ? currentVal : "ALL";
     }
 
-    // Dropdown Akar / Pangkal Pohon (Pencarian Pucuk Silsilah)
     const rootSelect = document.getElementById('filter-root');
     if (rootSelect) {
         const currentVal = rootSelect.value;
@@ -158,7 +162,7 @@ function updateFilterOptions() {
 }
 
 // ============================================================
-// 5. RENDER TREE VIEW
+// 5. RENDER TREE VIEW & REKURSIF POHON
 // ============================================================
 function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     container.innerHTML = '';
@@ -168,7 +172,7 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     const treeWrapper = document.createElement('div');
     treeWrapper.className = 'tree-wrapper-inner';
 
-    // PERLAKUAN KHUSUS FILTER GENERASI SPESIFIK (Matriks Flex)
+    // TAMPILAN MATRIKS PER-GENERASI
     if (selectedGen !== 'ALL') {
         const flexContainer = document.createElement('div');
         flexContainer.className = 'flex flex-wrap justify-center items-start gap-6 max-w-7xl';
@@ -203,7 +207,7 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
 
         treeWrapper.appendChild(flexContainer);
     } 
-    // TAMPILAN POHON BERKETINGGIAN (NORMAL TREE)
+    // TAMPILAN POHON SILSILAH UTAMA
     else {
         let rootCandidates = [];
 
@@ -228,17 +232,14 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     }
 
     container.appendChild(treeWrapper);
-    
-    // Terapkan Zoom & Scroll Ke Tengah
     applyZoom();
+
     setTimeout(() => { 
         container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2; 
     }, 100);
 }
 
-// ============================================================
-// 6. HELPER REKURSIF POHON & DOKUMEN KARTU
-// ============================================================
+// Rekursi Pembentuk Cabang & Anak
 function buildTreeNode(member, filteredList) {
     if (!member) return null;
 
@@ -247,7 +248,6 @@ function buildTreeNode(member, filteredList) {
     const nodeContainer = document.createElement('div');
     nodeContainer.className = 'tree-node';
 
-    // Buat Kotak Pasangan Suami/Istri
     const coupleBox = document.createElement('div');
     coupleBox.className = 'couple-box';
     coupleBox.appendChild(createMemberCard(member));
@@ -266,7 +266,11 @@ function buildTreeNode(member, filteredList) {
     nodeContainer.appendChild(coupleBox);
 
     // Cari Keturunan / Anak-anak
-    const children = members.filter(m => m.ayahId === member.id || m.ibuId === member.id || (spouse && (m.ayahId === spouse.id || m.ibuId === spouse.id)));
+    const children = members.filter(m => 
+        (m.ayahId && m.ayahId === member.id) || 
+        (m.ibuId && m.ibuId === member.id) || 
+        (spouse && ((m.ayahId && m.ayahId === spouse.id) || (m.ibuId && m.ibuId === spouse.id)))
+    );
 
     if (children.length > 0) {
         const childrenContainer = document.createElement('div');
@@ -290,7 +294,7 @@ function buildTreeNode(member, filteredList) {
     return nodeContainer;
 }
 
-// Helper Pembuat Kartu Anggota Individual
+// Pembuat Kartu Anggota
 function createMemberCard(member) {
     const card = document.createElement('div');
     card.className = 'flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 p-2.5 rounded-xl min-w-[170px] shadow-sm hover:border-emerald-500/50 transition cursor-pointer';
