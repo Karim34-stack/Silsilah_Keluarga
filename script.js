@@ -4,16 +4,101 @@
 const SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbyI_d7HDbDyai1n_ybJJDxV1dVlz5fGuUu7vhEzFJFwwW7tI0_S5UlnwH7hDp_Rhk5Biw/exec";
 
-// Global State
-let members = []; 
+// ============================================================
+// GLOBAL STATE & DATA CONTOH (DEFAULT)
+// ============================================================
+let members = [
+    { id: "1", nama: "KYAI TOTARUNO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 1, ayahId: "", ibuId: "", pasanganId: "" },
+    { id: "2", nama: "KARSODIKROMO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 2, ayahId: "1", ibuId: "", pasanganId: "3" },
+    { id: "3", nama: "SIAH", gender: "Perempuan", statusHidup: "Wafat", generasi: 2, ayahId: "", ibuId: "", pasanganId: "2" }
+]; 
+
 let renderedMemberIds = new Set();
 let currentZoom = 1.0;
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 2.0;
 
-// ------------------------------------------------------------
-// 1. FITUR ZOOM POHON SILSILAH
-// ------------------------------------------------------------
+// ============================================================
+// 1. INISIALISASI APLIKASI
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Event listener input pencarian
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => renderApp());
+    }
+
+    // Panggil pemuat data & render awal
+    loadDataFromGoogleSheets();
+});
+
+// Fungsi memuat data (Persiapan integrasi Google Sheets API)
+async function loadDataFromGoogleSheets() {
+    try {
+        /* Hapus tanda komentar jika ingin terhubung ke Google Sheets Web App:
+        const response = await fetch('MASUKKAN_URL_WEB_APP_GOOGLE_SHEETS_ANDA');
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+            members = data;
+        }
+        */
+    } catch (error) {
+        console.error("Gagal memuat data dari Google Sheets:", error);
+    } finally {
+        // PERBAIKAN UTAMA: Selalu jalankan pembaruan dropdown & render
+        updateFilterOptions();
+        renderApp();
+    }
+}
+
+// ============================================================
+// 2. FUNGSI UTAMA RENDER APLIKASI (renderApp)
+// ============================================================
+function renderApp() {
+    const container = document.getElementById('tree-container');
+    if (!container) return;
+
+    const searchKeyword = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
+    const selectedRoot = document.getElementById('filter-root')?.value || 'ALL';
+    const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
+
+    // Filter Anggota
+    let filtered = members.filter(m => {
+        const matchesSearch = !searchKeyword || m.nama.toLowerCase().includes(searchKeyword);
+        const matchesGen = selectedGen === 'ALL' || String(m.generasi) === String(selectedGen);
+        return matchesSearch && matchesGen;
+    });
+
+    // Update Counter Total
+    const totalCountEl = document.getElementById('total-count');
+    if (totalCountEl) totalCountEl.innerText = filtered.length;
+
+    // Tampilan Kosong
+    if (members.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-16 text-slate-500">
+                <i class="fa-solid fa-database text-4xl mb-3 block text-emerald-500/50"></i>
+                <p class="text-sm font-medium">Memuat data atau belum ada anggota terdaftar...</p>
+            </div>`;
+        return;
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-16 text-slate-500">
+                <i class="fa-solid fa-user-slash text-4xl mb-3 block"></i>
+                <p class="text-sm font-medium">Tidak ditemukan anggota keluarga yang sesuai dengan kriteria filter.</p>
+            </div>`;
+        return;
+    }
+
+    // Render Pohon Silsilah
+    renderTreeView(container, filtered, selectedRoot);
+}
+
+// ============================================================
+// 3. FITUR ZOOM CONTROL
+// ============================================================
 function zoomTree(delta) {
     currentZoom = Math.min(Math.max(currentZoom + delta, MIN_ZOOM), MAX_ZOOM);
     applyZoom();
@@ -40,21 +125,21 @@ function applyZoom() {
     }
 }
 
-// ------------------------------------------------------------
-// 2. OPSI FILTER (AKAR = PENCARIAN PANGKAL)
-// ------------------------------------------------------------
+// ============================================================
+// 4. UPDATE DROPDOWN FILTER (AKAR & GENERASI)
+// ============================================================
 function updateFilterOptions() {
-    // A. Dropdown Generasi
+    // Dropdown Generasi
     const genSelect = document.getElementById('filter-gen');
     if (genSelect) {
         const currentVal = genSelect.value;
         const genList = [...new Set(members.map(m => parseInt(m.generasi) || 1))].sort((a, b) => a - b);
         genSelect.innerHTML = `<option value="ALL">Semua Generasi</option>`;
         genList.forEach(g => genSelect.innerHTML += `<option value="${g}">Generasi ${g}</option>`);
-        genSelect.value = currentVal;
+        genSelect.value = [...genSelect.options].some(opt => opt.value === currentVal) ? currentVal : "ALL";
     }
 
-    // B. Dropdown Pencarian Pangkal/Akar
+    // Dropdown Akar / Pangkal Pohon (Pencarian Pucuk Silsilah)
     const rootSelect = document.getElementById('filter-root');
     if (rootSelect) {
         const currentVal = rootSelect.value;
@@ -72,9 +157,9 @@ function updateFilterOptions() {
     }
 }
 
-// ------------------------------------------------------------
-// 3. RENDER TREE VIEW (DENGAN FILTER & ZOOM FIT)
-// ------------------------------------------------------------
+// ============================================================
+// 5. RENDER TREE VIEW
+// ============================================================
 function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     container.innerHTML = '';
     renderedMemberIds = new Set();
@@ -83,7 +168,7 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     const treeWrapper = document.createElement('div');
     treeWrapper.className = 'tree-wrapper-inner';
 
-    // JIKA TAMPILAN PER-GENERASI (Flat List / Flex Matriks)
+    // PERLAKUAN KHUSUS FILTER GENERASI SPESIFIK (Matriks Flex)
     if (selectedGen !== 'ALL') {
         const flexContainer = document.createElement('div');
         flexContainer.className = 'flex flex-wrap justify-center items-start gap-6 max-w-7xl';
@@ -118,7 +203,7 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
 
         treeWrapper.appendChild(flexContainer);
     } 
-    // JIKA TAMPILAN POHON SILSILAH BERKETINGGIAN
+    // TAMPILAN POHON BERKETINGGIAN (NORMAL TREE)
     else {
         let rootCandidates = [];
 
@@ -144,10 +229,91 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
 
     container.appendChild(treeWrapper);
     
-    // Terapkan Zoom Saat Ini
+    // Terapkan Zoom & Scroll Ke Tengah
     applyZoom();
-
     setTimeout(() => { 
         container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2; 
     }, 100);
+}
+
+// ============================================================
+// 6. HELPER REKURSIF POHON & DOKUMEN KARTU
+// ============================================================
+function buildTreeNode(member, filteredList) {
+    if (!member) return null;
+
+    renderedMemberIds.add(member.id);
+
+    const nodeContainer = document.createElement('div');
+    nodeContainer.className = 'tree-node';
+
+    // Buat Kotak Pasangan Suami/Istri
+    const coupleBox = document.createElement('div');
+    coupleBox.className = 'couple-box';
+    coupleBox.appendChild(createMemberCard(member));
+
+    const spouseId = member.pasanganId;
+    let spouse = spouseId ? members.find(m => m.id === spouseId) : null;
+    if (spouse) {
+        renderedMemberIds.add(spouse.id);
+        const heartBadge = document.createElement('div');
+        heartBadge.className = 'text-pink-500 text-xs font-bold px-1';
+        heartBadge.innerHTML = '<i class="fa-solid fa-heart"></i>';
+        coupleBox.appendChild(heartBadge);
+        coupleBox.appendChild(createMemberCard(spouse));
+    }
+
+    nodeContainer.appendChild(coupleBox);
+
+    // Cari Keturunan / Anak-anak
+    const children = members.filter(m => m.ayahId === member.id || m.ibuId === member.id || (spouse && (m.ayahId === spouse.id || m.ibuId === spouse.id)));
+
+    if (children.length > 0) {
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = 'tree-children';
+
+        children.forEach(child => {
+            const childWrapper = document.createElement('div');
+            childWrapper.className = 'tree-node-child';
+            const childNode = buildTreeNode(child, filteredList);
+            if (childNode) {
+                childWrapper.appendChild(childNode);
+                childrenContainer.appendChild(childWrapper);
+            }
+        });
+
+        if (childrenContainer.children.length > 0) {
+            nodeContainer.appendChild(childrenContainer);
+        }
+    }
+
+    return nodeContainer;
+}
+
+// Helper Pembuat Kartu Anggota Individual
+function createMemberCard(member) {
+    const card = document.createElement('div');
+    card.className = 'flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 p-2.5 rounded-xl min-w-[170px] shadow-sm hover:border-emerald-500/50 transition cursor-pointer';
+
+    const avatarUrl = member.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.nama)}&background=0D8ABC&color=fff`;
+    const isWafat = member.statusHidup === 'Wafat' || member.wafat;
+
+    card.innerHTML = `
+        <div class="relative">
+            <img src="${avatarUrl}" class="w-10 h-10 rounded-full object-cover border border-slate-600">
+        </div>
+        <div class="flex flex-col">
+            <h4 class="text-xs font-bold text-slate-100 uppercase tracking-wider line-clamp-1">${member.nama}</h4>
+            <div class="flex items-center gap-1 mt-1">
+                <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${member.gender === 'Perempuan' ? 'bg-pink-500/20 text-pink-400' : 'bg-blue-500/20 text-blue-400'}">
+                    ${member.gender || 'Laki-laki'}
+                </span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${isWafat ? 'bg-slate-700 text-slate-400' : 'bg-emerald-500/20 text-emerald-400'}">
+                    ${isWafat ? 'Wafat' : 'Hidup'}
+                </span>
+            </div>
+        </div>
+    `;
+
+    return card;
 }
