@@ -3,180 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Silsilah Keluarga - Visualisasi Pohon</title>
+    <title>Silsilah Keluarga</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons CDN -->
+    <!-- FontAwesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="style.css">
+    <!-- html2pdf.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        .tree-line-v { width: 2px; background-color: #475569; }
+        .tree-line-h { height: 2px; background-color: #475569; }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
 
-    <!-- Header Aplikasi -->
-    <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-            <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
-                <i class="fa-solid fa-sitemap text-xl"></i>
+    <!-- NAVBAR -->
+    <header class="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-40 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+                    <i class="fa-solid fa-sitemap text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-white">Silsilah Keluarga</h1>
+                    <p class="text-xs text-slate-400">Database Berbagi & Visualisasi Pohon Keluarga</p>
+                </div>
             </div>
-            <div>
-                <h1 class="font-bold text-lg leading-none tracking-wide">SILSILAH KELUARGA</h1>
-                <p class="text-xs text-slate-400 mt-1">Database Berbagi & Visualisasi Pohon Keluarga</p>
+
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/80 text-xs text-slate-300">
+                    <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                    <span id="status-text">Menghubungkan...</span>
+                </div>
+
+                <button onclick="fetchDataFromDatabase()" title="Muat Ulang Data" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+
+                <button id="btn-admin" onclick="toggleAdminRole()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300 text-xs font-medium transition">
+                    <i class="fa-solid fa-lock"></i>
+                    <span id="admin-text">Mode Admin</span>
+                </button>
             </div>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <!-- Badge Status Koneksi Dinamis -->
-            <span id="db-status-badge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-amber-400 border border-slate-700/60">
-                <span id="db-status-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> 
-                <span id="db-status-text">Menghubungkan...</span>
-            </span>
-
-            <button onclick="loadDataFromGoogleSheets()" class="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700/60 cursor-pointer" title="Refresh Data">
-                <i class="fa-solid fa-rotate"></i>
-            </button>
-
-            <!-- Toggle Mode Admin -->
-            <button id="btn-admin" onclick="toggleAdminMode()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center gap-2 font-medium transition cursor-pointer">
-                <i id="icon-admin" class="fa-solid fa-lock text-xs"></i> 
-                <span id="text-admin">Mode Admin</span>
-            </button>
         </div>
     </header>
 
-    <!-- Toolbar Filter & Kontrol Canvas -->
-    <main class="p-6">
-        <div class="bg-slate-900/80 p-3 rounded-2xl border border-slate-800 mb-6 flex flex-wrap items-center justify-between gap-3 shadow-xl">
-            <!-- Filter Section -->
-            <div class="flex flex-wrap items-center gap-3 flex-1">
-                <!-- Search Input -->
-                <div class="relative min-w-[220px]">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-                    <input type="text" id="search-input" placeholder="Cari nama anggota..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs focus:outline-none focus:border-emerald-500/50">
-                </div>
+    <!-- CONTROL PANEL & FILTER BAR -->
+    <main class="max-w-7xl mx-auto p-4 md:p-6">
+        <div class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div class="relative flex-1 min-w-[200px]">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                <input type="text" id="search-input" oninput="renderApp()" placeholder="Cari nama anggota..." class="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition">
+            </div>
 
-                <!-- Dropdown Search Akar / Pangkal Pohon -->
-                <select id="filter-root" onchange="renderApp()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500/50">
-                    <option value="ALL">Semua Akar (Pohon Utama)</option>
+            <div class="flex flex-wrap items-center gap-2">
+                <select id="filter-root" onchange="renderApp()" class="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition">
+                    <option value="ALL">Semua Akar Keluarga</option>
                 </select>
 
-                <!-- Dropdown Filter Generasi -->
-                <select id="filter-gen" onchange="renderApp()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500/50">
+                <select id="filter-gen" onchange="renderApp()" class="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition">
                     <option value="ALL">Semua Generasi</option>
                 </select>
 
-                <!-- Total Indicator -->
-                <span id="total-badge" class="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-400 flex items-center gap-1.5">
-                    <i class="fa-solid fa-users text-emerald-400"></i> Total: <strong id="total-count" class="text-emerald-400">0</strong> Anggota
-                </span>
-            </div>
+                <!-- Indikator Jumlah Anggota -->
+                <div class="flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-slate-300">
+                    <i class="fa-solid fa-users text-emerald-400"></i>
+                    <span>Total: <strong id="member-count" class="text-emerald-400 font-bold">0</strong> Anggota</span>
+                </div>
 
-            <!-- Controls (Zoom & Actions) -->
-            <div class="flex items-center gap-2">
-                <!-- Kontrol Zoom -->
-                <div class="zoom-controls">
-                    <button onclick="zoomTree(-0.1)" title="Perkecil (Zoom Out)" class="zoom-btn">
-                        <i class="fa-solid fa-magnifying-glass-minus"></i>
+                <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-700/80 text-xs">
+                    <button id="view-tree-btn" onclick="setViewMode('tree')" class="px-3 py-1.5 rounded-lg font-medium bg-emerald-600 text-white transition">
+                        <i class="fa-solid fa-diagram-project mr-1"></i> Pohon
                     </button>
-                    <span id="zoom-level" class="px-2 text-emerald-400 font-bold min-w-[45px] text-center">100%</span>
-                    <button onclick="zoomTree(0.1)" title="Perbesar (Zoom In)" class="zoom-btn">
-                        <i class="fa-solid fa-magnifying-glass-plus"></i>
-                    </button>
-                    <button onclick="resetZoom()" title="Reset Zoom" class="zoom-btn border-l border-slate-800 ml-1">
-                        <i class="fa-solid fa-rotate-left"></i>
+                    <button id="view-grid-btn" onclick="setViewMode('grid')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition">
+                        <i class="fa-solid fa-grip mr-1"></i> Grid
                     </button>
                 </div>
 
-                <button onclick="openModal()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-2 transition shadow-lg shadow-emerald-900/20 cursor-pointer">
+                <button onclick="exportToPDF()" class="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition shadow-lg shadow-rose-900/20">
+                    <i class="fa-solid fa-file-pdf text-sm"></i> Export PDF
+                </button>
+
+                <button onclick="openFormModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition shadow-lg shadow-emerald-900/20">
                     <i class="fa-solid fa-user-plus"></i> Tambah Anggota
                 </button>
             </div>
         </div>
 
-        <!-- Canvas Pohon Silsilah -->
-        <div id="tree-container" class="bg-slate-900/40 rounded-3xl border border-slate-800/80 min-h-[600px] flex items-center justify-center overflow-auto">
-            <!-- Konten Pohon Dirender oleh script.js -->
+        <!-- CONTAINER POHON SILSILAH -->
+        <div id="tree-container" class="min-h-[500px] bg-slate-900 border border-slate-800 rounded-2xl p-4 overflow-x-auto touch-pan-x">
+            <!-- Pohon Silsilah di-render oleh script.js -->
         </div>
     </main>
 
-    <!-- Modal Form Tambah / Edit Anggota -->
-    <div id="modal-tambah" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative text-slate-100">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-                <h3 class="font-bold text-base flex items-center gap-2">
-                    <i class="fa-solid fa-user-plus text-emerald-400"></i> <span id="modal-title">Tambah Anggota Keluarga</span>
-                </h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition cursor-pointer">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+    <!-- MODAL FORM TAMBAH / EDIT ANGGOTA -->
+    <div id="form-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+                <h3 id="form-title" class="font-bold text-slate-100">Tambah Anggota Keluarga</h3>
+                <button onclick="closeFormModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
 
-            <form id="form-add-member" onsubmit="submitMember(event)" class="space-y-3">
-                <input type="hidden" id="edit-member-id" value="">
+            <form id="member-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <input type="hidden" id="form-id">
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Nama Lengkap</label>
-                    <input type="text" id="add-nama" required placeholder="Contoh: Budi Santoso" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Nama Lengkap *</label>
+                    <input type="text" id="form-nama" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Jenis Kelamin</label>
-                        <select id="add-gender" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                            <option value="Laki-laki">Laki-laki</option>
-                            <option value="Perempuan">Perempuan</option>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Jenis Kelamin</label>
+                        <select id="form-gender" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="L">Laki-laki</option>
+                            <option value="P">Perempuan</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Status Hidup</label>
-                        <select id="add-status" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Status</label>
+                        <select id="form-status" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
                             <option value="Hidup">Hidup</option>
                             <option value="Wafat">Wafat</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Generasi Ke-</label>
+                    <input type="number" id="form-generasi" min="1" value="1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Generasi Ke-</label>
-                        <input type="number" id="add-generasi" value="1" min="1" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Ayah</label>
+                        <select id="form-ayah" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="">-- Tidak Ada --</option>
+                        </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Pasangan (Opsional)</label>
-                        <select id="add-pasangan" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                            <option value="">-- Tanpa Pasangan --</option>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Ibu</label>
+                        <select id="form-ibu" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="">-- Tidak Ada --</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Ayah (Opsional)</label>
-                        <select id="add-ayah" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                            <option value="">-- Tanpa Ayah --</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Ibu (Opsional)</label>
-                        <select id="add-ibu" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                            <option value="">-- Tanpa Ibu --</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Pasangan (Suami/Istri)</label>
+                    <select id="form-pasangan" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <option value="">-- Tidak Ada --</option>
+                    </select>
                 </div>
 
-                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition cursor-pointer">
-                        Batal
-                    </button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium transition shadow-lg shadow-emerald-900/20 cursor-pointer">
-                        Simpan Data
-                    </button>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Foto Profil</label>
+                    <div class="flex gap-2 items-center">
+                        <input type="file" id="form-file-input" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+                        <button type="button" onclick="document.getElementById('form-file-input').click()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 transition whitespace-nowrap border border-slate-600">
+                            <i class="fa-solid fa-cloud-arrow-up text-emerald-400"></i> Upload Foto
+                        </button>
+                        <input type="text" id="form-foto" placeholder="atau URL foto (https://...)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <p id="upload-status" class="text-[10px] text-slate-400 mt-1 hidden"></p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Catatan / Bio Singkat</label>
+                    <textarea id="form-catatan" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-700">
+                    <button type="button" onclick="closeFormModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-semibold transition">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition">Simpan Data</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Custom Script -->
+    <!-- MODAL DETAIL KERABAT -->
+    <div id="detail-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6 relative">
+            <button onclick="closeDetailModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div id="detail-content"></div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
