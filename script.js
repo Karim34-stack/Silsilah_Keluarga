@@ -1,24 +1,18 @@
 // ============================================================
 // DATA SILSILAH LENGKAP (CONTOH 3 GENERASI)
 // ============================================================
+// Ganti URL ini dengan URL Web App Google Apps Script Anda jika ada
+const GOOGLE_SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbzBo9d7OP8HX4V8Ti6vD2z2xz62WBTYk17aj9zKATcymeOfr4axzsOgkns8l4sVP1sCog/exec"; 
 
-const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzBo9d7OP8HX4V8Ti6vD2z2xz62WBTYk17aj9zKATcymeOfr4axzsOgkns8l4sVP1sCog/exec";
-
-// ============================================================
-// DATA SILSILAH & GLOBAL STATES
-// ============================================================
+// Data Dummy Default
 let members = [
     { id: "1", nama: "PRAMUDJO SUWARNO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 1, ayahId: "", ibuId: "", pasanganId: "" },
-    
     { id: "2", nama: "SUTASMIATUN", gender: "Perempuan", statusHidup: "Hidup", generasi: 2, ayahId: "1", ibuId: "", pasanganId: "3" },
     { id: "3", nama: "TOTOK SUGIARTO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 2, ayahId: "", ibuId: "", pasanganId: "2" },
-    
     { id: "4", nama: "SUKATRI", gender: "Perempuan", statusHidup: "Hidup", generasi: 2, ayahId: "1", ibuId: "", pasanganId: "5" },
     { id: "5", nama: "PANGGIH", gender: "Laki-laki", statusHidup: "Hidup", generasi: 2, ayahId: "", ibuId: "", pasanganId: "4" },
-
     { id: "6", nama: "SRUASTI", gender: "Perempuan", statusHidup: "Hidup", generasi: 2, ayahId: "1", ibuId: "", pasanganId: "7" },
     { id: "7", nama: "NARSANTOSO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 2, ayahId: "", ibuId: "", pasanganId: "6" },
-
     { id: "8", nama: "VIVI", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "2", pasanganId: "" },
     { id: "9", nama: "TAMI", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "2", pasanganId: "" },
     { id: "10", nama: "HANA", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "2", pasanganId: "" },
@@ -41,16 +35,63 @@ document.addEventListener('DOMContentLoaded', () => {
         searchInput.addEventListener('input', () => renderApp());
     }
 
-    updateFilterOptions();
-    renderApp();
+    loadDataFromGoogleSheets();
 });
 
-function loadDataFromGoogleSheets() {
-    updateFilterOptions();
-    renderApp();
+// Load Data Google Sheets dengan Safe Timeout & Fallback Status
+async function loadDataFromGoogleSheets() {
+    const container = document.getElementById('tree-container');
+    const statusBadge = document.getElementById('db-status-badge');
+    const statusDot = document.getElementById('db-status-dot');
+    const statusText = document.getElementById('db-status-text');
+
+    if (container) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center p-12 text-slate-400 gap-3">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-500"></i>
+                <p class="text-xs">Mengambil data silsilah...</p>
+            </div>
+        `;
+    }
+
+    if (statusText) statusText.innerText = "Menghubungkan...";
+    if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+    if (statusBadge) statusBadge.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-amber-400 border border-slate-700/60";
+
+    try {
+        if (!GOOGLE_SHEETS_API_URL || GOOGLE_SHEETS_API_URL.trim() === "") {
+            throw new Error("URL API Google Sheets belum dikonfigurasi.");
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 detik timeout
+
+        const response = await fetch(GOOGLE_SHEETS_API_URL, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+            members = data;
+        }
+
+        if (statusText) statusText.innerText = "Google Sheets Terhubung";
+        if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+        if (statusBadge) statusBadge.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-emerald-400 border border-slate-700/60";
+
+    } catch (error) {
+        console.warn("Koneksi Google Sheets gagal/offline, menggunakan data lokal:", error.message);
+
+        if (statusText) statusText.innerText = "Mode Offline / Lokal";
+        if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-rose-500";
+        if (statusBadge) statusBadge.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-rose-400 border border-slate-700/60";
+    } finally {
+        updateFilterOptions();
+        renderApp();
+    }
 }
 
-// Mode Admin Khusus EDIT & HAPUS
 function toggleAdminMode() {
     isAdminMode = !isAdminMode;
     const btnAdmin = document.getElementById('btn-admin');
@@ -67,7 +108,6 @@ function toggleAdminMode() {
         if (textAdmin) textAdmin.innerText = "Mode Admin";
     }
 
-    // Re-render kartu untuk memunculkan/menyembunyikan tombol Edit/Hapus
     renderApp();
 }
 
@@ -212,7 +252,7 @@ function buildTreeNode(member, filteredList) {
     return nodeContainer;
 }
 
-// Pembuat Kartu Anggota
+// Pembuat Kartu Anggota (Tombol +Kerabat SELALU MUNCUL DI SETIAP KARTU)
 function createMemberCard(member) {
     const card = document.createElement('div');
     card.className = 'relative group flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 p-2.5 rounded-xl min-w-[170px] shadow-sm hover:border-emerald-500/50 transition cursor-pointer';
@@ -236,12 +276,12 @@ function createMemberCard(member) {
             </div>
         </div>
 
-        <!-- Tombol (+) Tambah Kerabat: SELALU MUNCUL (Di Luar Mode Admin) -->
-        <button onclick="openModalForRelation('${member.id}')" title="Tambah Anak / Kerabat" class="absolute -top-2 -right-2 bg-emerald-600 hover:bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md transition z-10 cursor-pointer">
+        <!-- Tombol (+) TAMBAH KERABAT: SELALU AKTIF DI KANAN ATAS KARTU -->
+        <button onclick="openModalForRelation('${member.id}')" title="Tambah Anak / Kerabat dari ${member.nama}" class="absolute -top-2 -right-2 bg-emerald-600 hover:bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md transition z-10 cursor-pointer">
             <i class="fa-solid fa-plus"></i>
         </button>
 
-        <!-- Tombol EDIT & HAPUS: HANYA MUNCUL SAAT MODE ADMIN AKTIF -->
+        <!-- Tombol EDIT & HAPUS: HANYA DITAMPILKAN SAAT MODE ADMIN AKTIF -->
         ${isAdminMode ? `
             <div class="absolute -bottom-2 right-2 flex items-center gap-1 z-10">
                 <button onclick="editMember('${member.id}')" title="Edit Data" class="bg-amber-600 hover:bg-amber-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow-md transition cursor-pointer">
@@ -357,7 +397,6 @@ function deleteMember(memberId) {
     if (confirm(`Apakah Anda yakin ingin menghapus "${member.nama}" dari silsilah?`)) {
         members = members.filter(m => m.id !== memberId);
         
-        // Bersihkan referensi yang mengarah ke id yang dihapus
         members.forEach(m => {
             if (m.pasanganId === memberId) m.pasanganId = "";
             if (m.ayahId === memberId) m.ayahId = "";
@@ -412,15 +451,12 @@ function submitMember(event) {
     };
 
     if (editId) {
-        // Mode Edit: Update data yang ada
         const index = members.findIndex(m => m.id === editId);
         if (index !== -1) members[index] = memberData;
     } else {
-        // Mode Tambah Baru
         members.push(memberData);
     }
 
-    // Hubungkan relasi pasangan timbal balik jika diisi
     if (memberData.pasanganId) {
         const spouse = members.find(m => m.id === memberData.pasanganId);
         if (spouse) spouse.pasanganId = memberData.id;
