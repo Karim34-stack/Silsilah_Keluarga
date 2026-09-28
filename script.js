@@ -334,8 +334,9 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
         }
     }
 
+    // PERBAIKAN LAYOUT UTAMA DUA ARAH SCROLL & PADDING KIRI-KANAN (MIN-WIDTH FIT-CONTENT)
     const treeWrapper = document.createElement('div');
-    treeWrapper.className = 'flex flex-col items-center gap-12 overflow-x-auto py-6 w-full';
+    treeWrapper.className = 'inline-flex flex-col items-center gap-12 py-6 px-12 min-w-full w-max mx-auto';
 
     rootCandidates.forEach(root => {
         if (!renderedMemberIds.has(root.id)) {
@@ -345,6 +346,11 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     });
 
     container.appendChild(treeWrapper);
+
+    // Otomatis geser scroll ke posisi tengah saat pertama kali dimuat di HP
+    setTimeout(() => {
+        container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
+    }, 100);
 }
 
 function buildTreeNode(member, allMembers) {
