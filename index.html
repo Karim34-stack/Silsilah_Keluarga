@@ -172,6 +172,21 @@
       </div>
     </main>
 
+
+    <!-- KONTROL ZOOM (ZOOM IN / ZOOM OUT / RESET) -->
+<div class="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-700/80 text-xs">
+    <button onclick="zoomTree(-0.1)" title="Perkecil (Zoom Out)" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+        <i class="fa-solid fa-magnifying-glass-minus text-sm"></i>
+    </button>
+    <span id="zoom-level" class="px-2 text-emerald-400 font-bold min-w-[45px] text-center">100%</span>
+    <button onclick="zoomTree(0.1)" title="Perbesar (Zoom In)" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+        <i class="fa-solid fa-magnifying-glass-plus text-sm"></i>
+    </button>
+    <button onclick="resetZoom()" title="Reset Zoom (100%)" class="px-2 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition border-l border-slate-700/60 ml-1">
+        <i class="fa-solid fa-rotate-left text-xs"></i>
+    </button>
+</div>
+    
     <!-- MODAL FORM TAMBAH / EDIT ANGGOTA -->
     <div
       id="form-modal"
