@@ -68,7 +68,11 @@
                 <select id="filter-gen" onchange="renderApp()" class="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition">
                     <option value="ALL">Semua Generasi</option>
                 </select>
-
+                 <!-- Badge Jumlah Anggota -->
+<div class="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-slate-300">
+    <i class="fa-solid fa-users text-emerald-400"></i>
+    <span>Total: <strong id="member-count" class="text-emerald-400 font-bold">0</strong> Anggota</span>
+</div>
                 <!-- Toggle Tampilan -->
                 <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-700/80 text-xs">
                     <button id="view-tree-btn" onclick="setViewMode('tree')" class="px-3 py-1.5 rounded-lg font-medium bg-emerald-600 text-white transition">
