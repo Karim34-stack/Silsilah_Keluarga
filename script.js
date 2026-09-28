@@ -4,33 +4,34 @@
 
 const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzBo9d7OP8HX4V8Ti6vD2z2xz62WBTYk17aj9zKATcymeOfr4axzsOgkns8l4sVP1sCog/exec";
 
+// ============================================================
+// DATA DEFAULTS & GLOBAL STATES
+// ============================================================
 let members = [
-    // GENERASI 1 (Akar Utama)
     { id: "1", nama: "KYAI TOTARUNO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 1, ayahId: "", ibuId: "", pasanganId: "2" },
     { id: "2", nama: "NYAI TOTARUNO", gender: "Perempuan", statusHidup: "Wafat", generasi: 1, ayahId: "", ibuId: "", pasanganId: "1" },
-
-    // GENERASI 2 (Anak dari Kyai Totaruno)
-    { id: "3", nama: "KARSODIKROMO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 2, ayahId: "1", ibuId: "2", pasanganId: "4" },
-    { id: "4", nama: "SIAH", gender: "Perempuan", statusHidup: "Wafat", generasi: 2, ayahId: "", ibuId: "", pasanganId: "3" },
     
-    { id: "5", nama: "SURYODIKROMO", gender: "Laki-laki", statusHidup: "Wafat", generasi: 2, ayahId: "1", ibuId: "2", pasanganId: "6" },
-    { id: "6", nama: "MARIYAM", gender: "Perempuan", statusHidup: "Wafat", generasi: 2, ayahId: "", ibuId: "", pasanganId: "5" },
-
-    // GENERASI 3 (Cucu / Anak dari Karsodikromo)
-    { id: "7", nama: "AHMAD KARSODI", gender: "Laki-laki", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "4", pasanganId: "" },
-    { id: "8", nama: "SITI KARSODI", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "4", pasanganId: "" },
+    { id: "3", nama: "PRAMUDJO SUWARNO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 2, ayahId: "1", ibuId: "2", pasanganId: "" },
     
-    // GENERASI 3 (Cucu / Anak dari Suryodikromo)
-    { id: "9", nama: "BUDI SURYO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 3, ayahId: "5", ibuId: "6", pasanganId: "" }
-]; 
+    { id: "4", nama: "SUTASMIATUN", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "", pasanganId: "5" },
+    { id: "5", nama: "TOTOK SUGIARTO", gender: "Laki-laki", statusHidup: "Hidup", generasi: 3, ayahId: "", ibuId: "", pasanganId: "4" },
+    
+    { id: "6", nama: "SUKATRI", gender: "Perempuan", statusHidup: "Hidup", generasi: 3, ayahId: "3", ibuId: "", pasanganId: "7" },
+    { id: "7", nama: "PANGGIH", gender: "Laki-laki", statusHidup: "Hidup", generasi: 3, ayahId: "", ibuId: "", pasanganId: "6" },
+
+    { id: "8", nama: "TAMI", gender: "Perempuan", statusHidup: "Hidup", generasi: 4, ayahId: "5", ibuId: "4", pasanganId: "" },
+    { id: "9", nama: "HANA", gender: "Perempuan", statusHidup: "Hidup", generasi: 4, ayahId: "5", ibuId: "4", pasanganId: "" },
+    { id: "10", nama: "HANI", gender: "Perempuan", statusHidup: "Hidup", generasi: 4, ayahId: "5", ibuId: "4", pasanganId: "" }
+];
 
 let renderedMemberIds = new Set();
 let currentZoom = 1.0;
+let isAdminMode = false;
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 2.0;
 
 // ============================================================
-// 1. INISIALISASI APLIKASI
+// 1. INIT APLIKASI
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-input');
@@ -38,43 +39,37 @@ document.addEventListener('DOMContentLoaded', () => {
         searchInput.addEventListener('input', () => renderApp());
     }
 
-    // Muat opsi dropdown dan tampilkan pohon langsung
     updateFilterOptions();
     renderApp();
 });
 
-// Fungsi memuat data dari API / Google Sheets jika ada
-async function loadDataFromGoogleSheets() {
-    const container = document.getElementById('tree-container');
-    if (container) {
-        container.innerHTML = `
-            <div class="text-center py-16 text-slate-400">
-                <i class="fa-solid fa-spinner fa-spin text-4xl mb-3 text-emerald-400"></i>
-                <p class="text-sm font-medium">Mengambil data dari Google Sheets...</p>
-            </div>`;
+function loadDataFromGoogleSheets() {
+    updateFilterOptions();
+    renderApp();
+}
+
+// Switch Mode Admin
+function toggleAdminMode() {
+    isAdminMode = !isAdminMode;
+    const btnAdmin = document.getElementById('btn-admin');
+    const iconAdmin = document.getElementById('icon-admin');
+    const textAdmin = document.getElementById('text-admin');
+
+    if (isAdminMode) {
+        btnAdmin.className = "px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg border border-emerald-500 flex items-center gap-2 font-medium transition shadow-lg shadow-emerald-900/30";
+        iconAdmin.className = "fa-solid fa-lock-open text-xs";
+        textAdmin.innerText = "Mode Admin (Aktif)";
+    } else {
+        btnAdmin.className = "px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center gap-2 font-medium transition";
+        iconAdmin.className = "fa-solid fa-lock text-xs";
+        textAdmin.innerText = "Mode Admin";
     }
 
-    try {
-        const response = await fetch(GOOGLE_SHEETS_URL);
-        const data = await response.json();
-
-        // Validasi apakah data berbentuk Array dan tidak kosong
-        if (Array.isArray(data) && data.length > 0) {
-            members = data;
-        } else {
-            console.warn("Data kosong atau format JSON tidak sesuai:", data);
-        }
-    } catch (error) {
-        console.error("Gagal mengambil data dari Google Sheets:", error);
-    } finally {
-        // Pembaruan dropdown filter dan render pohon
-        updateFilterOptions();
-        renderApp();
-    }
+    renderApp();
 }
 
 // ============================================================
-// 2. FUNGSI UTAMA RENDER APLIKASI
+// 2. RENDER POHON & FILTER
 // ============================================================
 function renderApp() {
     const container = document.getElementById('tree-container');
@@ -84,101 +79,18 @@ function renderApp() {
     const selectedRoot = document.getElementById('filter-root')?.value || 'ALL';
     const selectedGen = document.getElementById('filter-gen')?.value || 'ALL';
 
-    // Filter Anggota
     let filtered = members.filter(m => {
         const matchesSearch = !searchKeyword || m.nama.toLowerCase().includes(searchKeyword);
         const matchesGen = selectedGen === 'ALL' || String(m.generasi) === String(selectedGen);
         return matchesSearch && matchesGen;
     });
 
-    // Update Counter Total
     const totalCountEl = document.getElementById('total-count');
     if (totalCountEl) totalCountEl.innerText = filtered.length;
 
-    if (members.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-16 text-slate-500">
-                <i class="fa-solid fa-database text-4xl mb-3 block text-emerald-500/50"></i>
-                <p class="text-sm font-medium">Memuat data atau belum ada anggota terdaftar...</p>
-            </div>`;
-        return;
-    }
-
-    if (filtered.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-16 text-slate-500">
-                <i class="fa-solid fa-user-slash text-4xl mb-3 block"></i>
-                <p class="text-sm font-medium">Tidak ditemukan anggota keluarga yang sesuai dengan kriteria filter.</p>
-            </div>`;
-        return;
-    }
-
-    // Render Pohon
     renderTreeView(container, filtered, selectedRoot);
 }
 
-// ============================================================
-// 3. FITUR ZOOM CONTROL
-// ============================================================
-function zoomTree(delta) {
-    currentZoom = Math.min(Math.max(currentZoom + delta, MIN_ZOOM), MAX_ZOOM);
-    applyZoom();
-}
-
-function resetZoom() {
-    currentZoom = 1.0;
-    applyZoom();
-}
-
-function applyZoom() {
-    const container = document.getElementById('tree-container');
-    if (!container) return;
-
-    const treeWrapper = container.querySelector('.tree-wrapper-inner');
-    const zoomText = document.getElementById('zoom-level');
-
-    if (zoomText) {
-        zoomText.innerText = `${Math.round(currentZoom * 100)}%`;
-    }
-
-    if (treeWrapper) {
-        treeWrapper.style.transform = `scale(${currentZoom})`;
-    }
-}
-
-// ============================================================
-// 4. UPDATE DROPDOWN FILTER
-// ============================================================
-function updateFilterOptions() {
-    const genSelect = document.getElementById('filter-gen');
-    if (genSelect) {
-        const currentVal = genSelect.value;
-        const genList = [...new Set(members.map(m => parseInt(m.generasi) || 1))].sort((a, b) => a - b);
-        genSelect.innerHTML = `<option value="ALL">Semua Generasi</option>`;
-        genList.forEach(g => genSelect.innerHTML += `<option value="${g}">Generasi ${g}</option>`);
-        genSelect.value = [...genSelect.options].some(opt => opt.value === currentVal) ? currentVal : "ALL";
-    }
-
-    const rootSelect = document.getElementById('filter-root');
-    if (rootSelect) {
-        const currentVal = rootSelect.value;
-        const sortedMembers = [...members].sort((a, b) => {
-            if (a.generasi !== b.generasi) return a.generasi - b.generasi;
-            return a.nama.localeCompare(b.nama);
-        });
-
-        rootSelect.innerHTML = `<option value="ALL">Semua Akar (Pohon Utama)</option>`;
-        sortedMembers.forEach(m => {
-            rootSelect.innerHTML += `<option value="${m.id}">Pangkal: ${m.nama} (Gen ${m.generasi || 1})</option>`;
-        });
-
-        rootSelect.value = [...rootSelect.options].some(opt => opt.value === currentVal) ? currentVal : "ALL";
-    }
-}
-
-// ============================================================
-// 5. RENDER TREE VIEW & REKURSIF POHON
-// ============================================================
 function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     container.innerHTML = '';
     renderedMemberIds = new Set();
@@ -187,26 +99,22 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     const treeWrapper = document.createElement('div');
     treeWrapper.className = 'tree-wrapper-inner';
 
-    // TAMPILAN MATRIKS PER-GENERASI
     if (selectedGen !== 'ALL') {
         const flexContainer = document.createElement('div');
         flexContainer.className = 'flex flex-wrap justify-center items-start gap-6 max-w-7xl';
 
         let remaining = [...filteredMembers];
-
         while (remaining.length > 0) {
             const member = remaining.shift();
             if (renderedMemberIds.has(member.id)) continue;
 
             renderedMemberIds.add(member.id);
-
             const spouseId = member.pasanganId;
             let spouse = spouseId ? members.find(m => m.id === spouseId) : null;
             if (spouse) renderedMemberIds.add(spouse.id);
 
             const coupleBox = document.createElement('div');
             coupleBox.className = 'couple-box';
-            
             coupleBox.appendChild(createMemberCard(member));
 
             if (spouse) {
@@ -221,9 +129,7 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
         }
 
         treeWrapper.appendChild(flexContainer);
-    } 
-    // TAMPILAN POHON SILSILAH UTAMA
-    else {
+    } else {
         let rootCandidates = [];
 
         if (selectedRoot !== 'ALL') {
@@ -248,13 +154,9 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
 
     container.appendChild(treeWrapper);
     applyZoom();
-
-    setTimeout(() => { 
-        container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2; 
-    }, 100);
 }
 
-// Rekursi Pembentuk Cabang & Anak
+// Rekursi Pembangun Cabang
 function buildTreeNode(member, filteredList) {
     if (!member) return null;
 
@@ -280,7 +182,6 @@ function buildTreeNode(member, filteredList) {
 
     nodeContainer.appendChild(coupleBox);
 
-    // Cari Keturunan / Anak-anak
     const children = members.filter(m => 
         (m.ayahId && m.ayahId === member.id) || 
         (m.ibuId && m.ibuId === member.id) || 
@@ -309,10 +210,10 @@ function buildTreeNode(member, filteredList) {
     return nodeContainer;
 }
 
-// Pembuat Kartu Anggota
+// Kartu Anggota Individual
 function createMemberCard(member) {
     const card = document.createElement('div');
-    card.className = 'flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 p-2.5 rounded-xl min-w-[170px] shadow-sm hover:border-emerald-500/50 transition cursor-pointer';
+    card.className = 'relative group flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 p-2.5 rounded-xl min-w-[170px] shadow-sm hover:border-emerald-500/50 transition cursor-pointer';
 
     const avatarUrl = member.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.nama)}&background=0D8ABC&color=fff`;
     const isWafat = member.statusHidup === 'Wafat' || member.wafat;
@@ -332,24 +233,97 @@ function createMemberCard(member) {
                 </span>
             </div>
         </div>
+        ${isAdminMode ? `
+            <button onclick="openModalForRelation('${member.id}')" title="Tambah Anak / Kerabat" class="absolute -top-2 -right-2 bg-emerald-600 hover:bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md transition z-10">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        ` : ''}
     `;
 
     return card;
 }
 
 // ============================================================
-// LOGIKA MODAL FORM TAMBAH ANGGOTA
+// 3. ZOOM CONTROLS
 // ============================================================
+function zoomTree(delta) {
+    currentZoom = Math.min(Math.max(currentZoom + delta, MIN_ZOOM), MAX_ZOOM);
+    applyZoom();
+}
 
-// Buka Modal & Isi Pilihan Ayah, Ibu, Pasangan
+function resetZoom() {
+    currentZoom = 1.0;
+    applyZoom();
+}
+
+function applyZoom() {
+    const container = document.getElementById('tree-container');
+    if (!container) return;
+
+    const treeWrapper = container.querySelector('.tree-wrapper-inner');
+    const zoomText = document.getElementById('zoom-level');
+
+    if (zoomText) zoomText.innerText = `${Math.round(currentZoom * 100)}%`;
+    if (treeWrapper) treeWrapper.style.transform = `scale(${currentZoom})`;
+}
+
+// ============================================================
+// 4. DROPDOWN & MODAL FORM LOGIC
+// ============================================================
+function updateFilterOptions() {
+    const genSelect = document.getElementById('filter-gen');
+    if (genSelect) {
+        const currentVal = genSelect.value;
+        const genList = [...new Set(members.map(m => parseInt(m.generasi) || 1))].sort((a, b) => a - b);
+        genSelect.innerHTML = `<option value="ALL">Semua Generasi</option>`;
+        genList.forEach(g => genSelect.innerHTML += `<option value="${g}">Generasi ${g}</option>`);
+        genSelect.value = [...genSelect.options].some(opt => opt.value === currentVal) ? currentVal : "ALL";
+    }
+
+    const rootSelect = document.getElementById('filter-root');
+    if (rootSelect) {
+        const currentVal = rootSelect.value;
+        const sortedMembers = [...members].sort((a, b) => (a.generasi || 1) - (b.generasi || 1));
+
+        rootSelect.innerHTML = `<option value="ALL">Semua Akar (Pohon Utama)</option>`;
+        sortedMembers.forEach(m => {
+            rootSelect.innerHTML += `<option value="${m.id}">Pangkal: ${m.nama} (Gen ${m.generasi || 1})</option>`;
+        });
+
+        rootSelect.value = [...rootSelect.options].some(opt => opt.value === currentVal) ? currentVal : "ALL";
+    }
+}
+
 function openModal() {
-    const modal = document.getElementById('modal-tambah');
-    if (!modal) return;
-
-    // Reset Form
+    populateModalDropdowns();
     document.getElementById('form-add-member').reset();
+    document.getElementById('modal-title').innerText = "Tambah Anggota Keluarga";
+    document.getElementById('modal-tambah').classList.remove('hidden');
+}
 
-    // Population dropdown Ayah, Ibu, Pasangan dari data members yang ada
+function openModalForRelation(parentId) {
+    const parent = members.find(m => m.id === parentId);
+    if (!parent) return;
+
+    openModal();
+    document.getElementById('modal-title').innerText = `Tambah Keturunan dari ${parent.nama}`;
+
+    if (parent.gender === 'Laki-laki') {
+        document.getElementById('add-ayah').value = parent.id;
+        if (parent.pasanganId) document.getElementById('add-ibu').value = parent.pasanganId;
+    } else {
+        document.getElementById('add-ibu').value = parent.id;
+        if (parent.pasanganId) document.getElementById('add-ayah').value = parent.pasanganId;
+    }
+
+    document.getElementById('add-generasi').value = (parseInt(parent.generasi) || 1) + 1;
+}
+
+function closeModal() {
+    document.getElementById('modal-tambah').classList.add('hidden');
+}
+
+function populateModalDropdowns() {
     const ayahSelect = document.getElementById('add-ayah');
     const ibuSelect = document.getElementById('add-ibu');
     const pasanganSelect = document.getElementById('add-pasangan');
@@ -370,22 +344,13 @@ function openModal() {
     if (ayahSelect) ayahSelect.innerHTML = ayahOptions;
     if (ibuSelect) ibuSelect.innerHTML = ibuOptions;
     if (pasanganSelect) pasanganSelect.innerHTML = pasanganOptions;
-
-    modal.classList.remove('hidden');
 }
 
-// Tutup Modal
-function closeModal() {
-    const modal = document.getElementById('modal-tambah');
-    if (modal) modal.classList.add('hidden');
-}
-
-// Simpan Anggota Baru
 function submitMember(event) {
     event.preventDefault();
 
     const newMember = {
-        id: String(Date.now()), // Unique ID berbasis timestamp
+        id: String(Date.now()),
         nama: document.getElementById('add-nama').value.trim().toUpperCase(),
         gender: document.getElementById('add-gender').value,
         statusHidup: document.getElementById('add-status').value,
@@ -395,16 +360,13 @@ function submitMember(event) {
         pasanganId: document.getElementById('add-pasangan').value
     };
 
-    // Tambahkan ke array lokal
     members.push(newMember);
 
-    // Jika anggota baru diset punya pasangan, perbarui referensi pasangan sebaliknya
     if (newMember.pasanganId) {
         const spouse = members.find(m => m.id === newMember.pasanganId);
         if (spouse) spouse.pasanganId = newMember.id;
     }
 
-    // Refresh Tampilan & Dropdown
     updateFilterOptions();
     renderApp();
     closeModal();
