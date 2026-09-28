@@ -332,22 +332,36 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
     let rootCandidates = [];
 
     if (selectedRoot !== 'ALL') {
+        // Jika filter akar dipilih spesifik
         const rootObj = members.find(m => m.id === selectedRoot);
         if (rootObj) rootCandidates = [rootObj];
     } else {
-        rootCandidates = filteredMembers.filter(m => {
+        // ------------------------------------------------------------
+        // PERBAIKAN: CARI LELUHUR TERTINGGI (GENERASI TERKECIL)
+        // ------------------------------------------------------------
+        // 1. Cari generasi terkecil yang ada di database (misal Gen 1)
+        const minGen = Math.min(...filteredMembers.map(m => parseInt(m.generasi) || 1));
+        
+        // 2. Ambil hanya anggota dengan generasi paling atas tersebut
+        const topGenMembers = filteredMembers.filter(m => (parseInt(m.generasi) || 1) === minGen);
+
+        // 3. Prioritaskan anggota yang tidak punya ayah dan ibu
+        const primaryRoots = topGenMembers.filter(m => {
             const hasNoAyah = !m.ayahId || m.ayahId.toString().trim() === "";
             const hasNoIbu = !m.ibuId || m.ibuId.toString().trim() === "";
             return hasNoAyah && hasNoIbu;
         });
 
-        if (rootCandidates.length === 0 && filteredMembers.length > 0) {
-            const minGen = Math.min(...filteredMembers.map(m => parseInt(m.generasi) || 1));
-            rootCandidates = filteredMembers.filter(m => (parseInt(m.generasi) || 1) === minGen);
+        // 4. Jika ada pasangan, ambil salah satu saja sebagai pangkal pohon utama
+        if (primaryRoots.length > 0) {
+            // Hindari mengambil pasangan dari root pertama sebagai root kedua
+            const mainRoot = primaryRoots[0];
+            rootCandidates = [mainRoot];
+        } else if (topGenMembers.length > 0) {
+            rootCandidates = [topGenMembers[0]];
         }
     }
 
-    // PERBAIKAN LAYOUT UTAMA DUA ARAH SCROLL & PADDING KIRI-KANAN (MIN-WIDTH FIT-CONTENT)
     const treeWrapper = document.createElement('div');
     treeWrapper.className = 'inline-flex flex-col items-center gap-12 py-6 px-12 min-w-full w-max mx-auto';
 
@@ -360,7 +374,7 @@ function renderTreeView(container, filteredMembers, selectedRoot = 'ALL') {
 
     container.appendChild(treeWrapper);
 
-    // Otomatis geser scroll ke posisi tengah saat pertama kali dimuat di HP
+    // Otomatis posisikan scroll ke tengah
     setTimeout(() => {
         container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
     }, 100);
