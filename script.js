@@ -336,3 +336,76 @@ function createMemberCard(member) {
 
     return card;
 }
+
+// ============================================================
+// LOGIKA MODAL FORM TAMBAH ANGGOTA
+// ============================================================
+
+// Buka Modal & Isi Pilihan Ayah, Ibu, Pasangan
+function openModal() {
+    const modal = document.getElementById('modal-tambah');
+    if (!modal) return;
+
+    // Reset Form
+    document.getElementById('form-add-member').reset();
+
+    // Population dropdown Ayah, Ibu, Pasangan dari data members yang ada
+    const ayahSelect = document.getElementById('add-ayah');
+    const ibuSelect = document.getElementById('add-ibu');
+    const pasanganSelect = document.getElementById('add-pasangan');
+
+    let ayahOptions = '<option value="">-- Tanpa Ayah --</option>';
+    let ibuOptions = '<option value="">-- Tanpa Ibu --</option>';
+    let pasanganOptions = '<option value="">-- Tanpa Pasangan --</option>';
+
+    members.forEach(m => {
+        if (m.gender === 'Laki-laki') {
+            ayahOptions += `<option value="${m.id}">${m.nama} (Gen ${m.generasi || 1})</option>`;
+        } else {
+            ibuOptions += `<option value="${m.id}">${m.nama} (Gen ${m.generasi || 1})</option>`;
+        }
+        pasanganOptions += `<option value="${m.id}">${m.nama}</option>`;
+    });
+
+    if (ayahSelect) ayahSelect.innerHTML = ayahOptions;
+    if (ibuSelect) ibuSelect.innerHTML = ibuOptions;
+    if (pasanganSelect) pasanganSelect.innerHTML = pasanganOptions;
+
+    modal.classList.remove('hidden');
+}
+
+// Tutup Modal
+function closeModal() {
+    const modal = document.getElementById('modal-tambah');
+    if (modal) modal.classList.add('hidden');
+}
+
+// Simpan Anggota Baru
+function submitMember(event) {
+    event.preventDefault();
+
+    const newMember = {
+        id: String(Date.now()), // Unique ID berbasis timestamp
+        nama: document.getElementById('add-nama').value.trim().toUpperCase(),
+        gender: document.getElementById('add-gender').value,
+        statusHidup: document.getElementById('add-status').value,
+        generasi: parseInt(document.getElementById('add-generasi').value) || 1,
+        ayahId: document.getElementById('add-ayah').value,
+        ibuId: document.getElementById('add-ibu').value,
+        pasanganId: document.getElementById('add-pasangan').value
+    };
+
+    // Tambahkan ke array lokal
+    members.push(newMember);
+
+    // Jika anggota baru diset punya pasangan, perbarui referensi pasangan sebaliknya
+    if (newMember.pasanganId) {
+        const spouse = members.find(m => m.id === newMember.pasanganId);
+        if (spouse) spouse.pasanganId = newMember.id;
+    }
+
+    // Refresh Tampilan & Dropdown
+    updateFilterOptions();
+    renderApp();
+    closeModal();
+}
